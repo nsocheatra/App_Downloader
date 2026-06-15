@@ -18,7 +18,13 @@ DEFAULT_CONFIG = {
 
 
 class ConfigManager:
-    def __init__(self, config_path="config.json"):
+    def __init__(self, config_path=None):
+        if config_path is None:
+            if os.path.exists("config.json"):
+                config_path = "config.json"
+            else:
+                base = os.path.join(os.environ.get("LOCALAPPDATA", os.path.expanduser("~")), "App_Downloader")
+                config_path = os.path.join(base, "config.json")
         self.config_path = config_path
         self.config = self.load_config()
 
@@ -32,6 +38,7 @@ class ConfigManager:
         return dict(DEFAULT_CONFIG)
 
     def save_config(self):
+        os.makedirs(os.path.dirname(self.config_path), exist_ok=True)
         with open(self.config_path, "w") as f:
             json.dump(self.config, f, indent=2)
 
