@@ -1,4 +1,4 @@
 VERSION = "1.0.0"
 APP_NAME = "App_Downloader"
-REPO_OWNER = "anomalyco"
-REPO_NAME = "app_downloader"
+REPO_OWNER = "nsocheatra"
+REPO_NAME = "App_Downloader"
