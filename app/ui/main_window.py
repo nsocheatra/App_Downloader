@@ -48,9 +48,91 @@ PLATFORMS = [
 ]
 
 
+class SplashScreen(ctk.CTkToplevel):
+    def __init__(self, parent, on_close):
+        super().__init__(parent)
+        self.on_close = on_close
+
+        # Borderless window
+        self.overrideredirect(True)
+
+        # Size and Position
+        width = 500
+        height = 300
+        screen_width = self.winfo_screenwidth()
+        screen_height = self.winfo_screenheight()
+        x = (screen_width - width) // 2
+        y = (screen_height - height) // 2
+        self.geometry(f"{width}x{height}+{x}+{y}")
+
+        self.configure(fg_color="#0b0e1a")
+
+        # UI elements
+        logo_frame = ctk.CTkFrame(
+            self,
+            width=70,
+            height=70,
+            corner_radius=18,
+            fg_color="#1e2a45"
+        )
+        logo_frame.pack(pady=(40, 10))
+        logo_frame.pack_propagate(False)
+
+        ctk.CTkLabel(
+            logo_frame,
+            text="AD",
+            font=("Segoe UI", 24, "bold"),
+            text_color="#8b5cf6"
+        ).pack(expand=True)
+
+        ctk.CTkLabel(
+            self,
+            text="App_Downloader",
+            font=("Segoe UI", 26, "bold"),
+            text_color="#f1f5f9"
+        ).pack()
+
+        ctk.CTkLabel(
+            self,
+            text="Developed by Socheatra (XiaoPang)",
+            font=("Segoe UI", 12, "italic"),
+            text_color="#8b5cf6"
+        ).pack(pady=(2, 20))
+
+        self.progress = ctk.CTkProgressBar(
+            self,
+            width=300,
+            height=6,
+            corner_radius=3,
+            fg_color="#1e2448",
+            progress_color="#8b5cf6",
+            mode="indeterminate"
+        )
+        self.progress.pack()
+        self.progress.start()
+
+        self.status = ctk.CTkLabel(
+            self,
+            text="Loading application components...",
+            font=("Segoe UI", 11),
+            text_color="#64748b"
+        )
+        self.status.pack(pady=10)
+
+        # Automatically close after 2.5 seconds
+        self.after(2500, self.finish)
+
+    def finish(self):
+        self.progress.stop()
+        self.destroy()
+        self.on_close()
+
+
 class AppDownloader(ctk.CTk):
     def __init__(self):
         super().__init__()
+
+        self.withdraw()  # Hide main window during splash screen
 
         self.title("App_Downloader")
         self.geometry("1200x850")
@@ -77,6 +159,11 @@ class AppDownloader(ctk.CTk):
 
         self.show_view(self.config_manager.get("ui_mode", "modern"))
 
+        # Launch splash screen
+        SplashScreen(self, self.on_splash_done)
+
+    def on_splash_done(self):
+        self.deiconify()  # Show main window
         self._check_updates_on_startup()
 
     def show_view(self, mode):
@@ -164,7 +251,9 @@ class AppDownloader(ctk.CTk):
             is_audio = self.current_view.filetype_menu.get() == "Audio"
 
         self.cancel_flag = False
-        self.current_view.set_progress(0)
+        if hasattr(self.current_view, "progress"):
+            self.current_view.progress.configure(mode="indeterminate")
+            self.current_view.progress.start()
         self.update_status("Starting download...", "#fbbf24")
 
         self.download_thread = threading.Thread(target=self.download_worker, args=(url, is_audio))
@@ -189,7 +278,9 @@ class AppDownloader(ctk.CTk):
             return
 
         self.cancel_flag = False
-        self.current_view.set_progress(0)
+        if hasattr(self.current_view, "progress"):
+            self.current_view.progress.configure(mode="indeterminate")
+            self.current_view.progress.start()
         self.update_status("Starting audio download...", "#fbbf24")
 
         self.download_thread = threading.Thread(target=self.download_worker, args=(url, True))
@@ -209,9 +300,15 @@ class AppDownloader(ctk.CTk):
             downloaded = d.get("downloaded_bytes", 0)
             if total and total > 0:
                 percent = downloaded / total
+                if hasattr(self.current_view, "progress") and self.current_view.progress.cget("mode") == "indeterminate":
+                    self.current_view.progress.stop()
+                    self.current_view.progress.configure(mode="determinate")
                 self.current_view.set_progress(percent)
                 self.update_status(f"Downloading... {int(percent * 100)}%", "#fbbf24")
         elif d["status"] == "finished":
+            if hasattr(self.current_view, "progress") and self.current_view.progress.cget("mode") == "indeterminate":
+                self.current_view.progress.stop()
+                self.current_view.progress.configure(mode="determinate")
             self.current_view.set_progress(1)
             self.update_status("Processing file...", "#fbbf24")
 
@@ -260,6 +357,9 @@ class AppDownloader(ctk.CTk):
                     pass
 
         except Exception as e:
+            if hasattr(self.current_view, "progress"):
+                self.current_view.progress.stop()
+                self.current_view.progress.configure(mode="determinate")
             err_msg = str(e)
             if "cancelled by user" in err_msg.lower():
                 self.update_status("Download cancelled", "#f87171")

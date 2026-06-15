@@ -61,6 +61,13 @@ class AboutModal(ctk.CTkToplevel):
 
         ctk.CTkLabel(
             self,
+            text="Developed by Socheatra (XiaoPang)",
+            font=("Segoe UI", 12, "italic"),
+            text_color="#8b5cf6"
+        ).pack(pady=4)
+
+        ctk.CTkLabel(
+            self,
             text="Safe public video downloader",
             font=("Segoe UI", 12),
             text_color="#22c55e"

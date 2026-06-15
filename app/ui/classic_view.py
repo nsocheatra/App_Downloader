@@ -2,6 +2,7 @@ import customtkinter as ctk
 from app.ui.modals.settings_modal import SettingsModal
 from app.ui.modals.about_modal import AboutModal
 from app.ui.modals.platform_info_modal import PlatformInfoModal
+from app.core.theme_manager import CLASSIC_THEME
 
 PLATFORMS = [
     {"name": "TikTok", "key": "tiktok", "color": "#ff2d55", "domains": ["tiktok.com"], "supported": True},
@@ -33,7 +34,7 @@ PLATFORMS = [
 
 class ClassicView(ctk.CTkFrame):
     def __init__(self, parent, app_controller):
-        super().__init__(parent, fg_color="#f5f5f5")
+        super().__init__(parent, fg_color=CLASSIC_THEME["background"])
         self.app = app_controller
         self.selected_platform = None
         self.build_ui()

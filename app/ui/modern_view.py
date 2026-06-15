@@ -5,6 +5,7 @@ from app.ui.modals.platform_info_modal import PlatformInfoModal
 from app.ui.modals.quality_selector_modal import QualitySelectorModal
 from app.ui.modals.error_modal import ErrorModal
 from app.ui.modals.about_modal import AboutModal
+from app.core.theme_manager import MODERN_THEME
 
 
 SIDEBAR_ITEMS = [
@@ -48,14 +49,31 @@ class PlatformCard(ctk.CTkFrame):
         super().__init__(
             master,
             corner_radius=14,
-            fg_color="#13172b",
+            fg_color=MODERN_THEME["card"],
             border_width=1,
-            border_color="#1e2448"
+            border_color=MODERN_THEME["border"]
         )
         self.platform = platform
         self.on_select = on_select
         self.on_info = on_info
+        self.is_selected = False
         self.build_card()
+        self.bind_hover_events(self)
+
+    def bind_hover_events(self, widget):
+        widget.bind("<Enter>", self.on_enter)
+        widget.bind("<Leave>", self.on_leave)
+        for child in widget.winfo_children():
+            if not isinstance(child, ctk.CTkButton):
+                self.bind_hover_events(child)
+
+    def on_enter(self, event):
+        if not self.is_selected:
+            self.configure(border_color=self.platform["color"], fg_color=MODERN_THEME["card_hover"])
+
+    def on_leave(self, event):
+        if not self.is_selected:
+            self.configure(border_color=MODERN_THEME["border"], fg_color=MODERN_THEME["card"])
 
     def build_card(self):
         color = self.platform["color"]
@@ -130,23 +148,24 @@ class PlatformCard(ctk.CTkFrame):
         ).pack(side="top")
 
     def set_selected(self, selected):
+        self.is_selected = selected
         if selected:
             self.configure(
                 border_width=2,
                 border_color=self.platform["color"],
-                fg_color="#1a1f3a"
+                fg_color=MODERN_THEME["card_light"]
             )
         else:
             self.configure(
                 border_width=1,
-                border_color="#1e2448",
-                fg_color="#13172b"
+                border_color=MODERN_THEME["border"],
+                fg_color=MODERN_THEME["card"]
             )
 
 
 class ModernView(ctk.CTkFrame):
     def __init__(self, parent, app_controller):
-        super().__init__(parent, fg_color="#0b0e1a")
+        super().__init__(parent, fg_color=MODERN_THEME["background"])
         self.app = app_controller
         self.selected_platform = None
         self.cards = {}
@@ -160,7 +179,7 @@ class ModernView(ctk.CTkFrame):
             self,
             width=200,
             corner_radius=0,
-            fg_color="#090c17"
+            fg_color=MODERN_THEME["sidebar_bg"]
         )
         sidebar.grid(row=0, column=0, sticky="ns")
         sidebar.grid_propagate(False)
@@ -251,7 +270,7 @@ class ModernView(ctk.CTkFrame):
         content.grid(row=0, column=1, sticky="nsew")
         content.grid_columnconfigure(0, weight=1)
 
-        header_card = ctk.CTkFrame(content, corner_radius=16, fg_color="#13172b")
+        header_card = ctk.CTkFrame(content, corner_radius=16, fg_color=MODERN_THEME["card"])
         header_card.grid(row=0, column=0, padx=24, pady=(24, 14), sticky="ew")
         header_card.grid_columnconfigure(0, weight=1)
 
@@ -262,7 +281,7 @@ class ModernView(ctk.CTkFrame):
             text_color="#f1f5f9"
         ).grid(row=0, column=0, padx=22, pady=20, sticky="w")
 
-        url_card = ctk.CTkFrame(content, corner_radius=16, fg_color="#13172b")
+        url_card = ctk.CTkFrame(content, corner_radius=16, fg_color=MODERN_THEME["card"])
         url_card.grid(row=1, column=0, padx=24, pady=10, sticky="ew")
         url_card.grid_columnconfigure(0, weight=1)
 
@@ -318,7 +337,7 @@ class ModernView(ctk.CTkFrame):
         )
         self.detect_btn.grid(row=0, column=2)
 
-        platform_section = ctk.CTkFrame(content, corner_radius=16, fg_color="#13172b")
+        platform_section = ctk.CTkFrame(content, corner_radius=16, fg_color=MODERN_THEME["card"])
         platform_section.grid(row=2, column=0, padx=24, pady=12, sticky="ew")
         platform_section.grid_columnconfigure(0, weight=1)
 
@@ -352,7 +371,7 @@ class ModernView(ctk.CTkFrame):
         for col in range(columns):
             grid_wrapper.grid_columnconfigure(col, weight=1, minsize=180)
 
-        options_section = ctk.CTkFrame(content, corner_radius=16, fg_color="#13172b")
+        options_section = ctk.CTkFrame(content, corner_radius=16, fg_color=MODERN_THEME["card"])
         options_section.grid(row=3, column=0, padx=24, pady=10, sticky="ew")
         options_section.grid_columnconfigure(2, weight=1)
 
@@ -462,7 +481,7 @@ class ModernView(ctk.CTkFrame):
         self.save_entry.pack(fill="x")
         self.save_entry.insert(0, "downloads/videos")
 
-        action_section = ctk.CTkFrame(content, corner_radius=16, fg_color="#13172b")
+        action_section = ctk.CTkFrame(content, corner_radius=16, fg_color=MODERN_THEME["card"])
         action_section.grid(row=4, column=0, padx=24, pady=10, sticky="ew")
 
         action_inner = ctk.CTkFrame(action_section, fg_color="transparent")
@@ -494,7 +513,7 @@ class ModernView(ctk.CTkFrame):
         )
         self.stop_btn.pack(side="left", padx=10)
 
-        progress_section = ctk.CTkFrame(content, corner_radius=16, fg_color="#13172b")
+        progress_section = ctk.CTkFrame(content, corner_radius=16, fg_color=MODERN_THEME["card"])
         progress_section.grid(row=5, column=0, padx=24, pady=10, sticky="ew")
         progress_section.grid_columnconfigure(0, weight=1)
 
@@ -530,7 +549,7 @@ class ModernView(ctk.CTkFrame):
         )
         self.progress_pct.pack(side="right")
 
-        bottom_bar = ctk.CTkFrame(content, corner_radius=16, fg_color="#13172b")
+        bottom_bar = ctk.CTkFrame(content, corner_radius=16, fg_color=MODERN_THEME["card"])
         bottom_bar.grid(row=6, column=0, padx=24, pady=(10, 24), sticky="ew")
 
         bar_inner = ctk.CTkFrame(bottom_bar, fg_color="transparent")
@@ -582,7 +601,7 @@ class ModernView(ctk.CTkFrame):
             text_color="#64748b"
         ).pack(side="left", padx=(6, 0))
 
-        history_section = ctk.CTkFrame(content, corner_radius=16, fg_color="#13172b")
+        history_section = ctk.CTkFrame(content, corner_radius=16, fg_color=MODERN_THEME["card"])
         history_section.grid(row=7, column=0, padx=24, pady=(0, 24), sticky="nsew")
         history_section.grid_columnconfigure(0, weight=1)
         history_section.grid_rowconfigure(1, weight=1)

@@ -4,6 +4,7 @@ import platform
 
 
 def open_folder(path):
+    path = os.path.abspath(path)
     if not os.path.exists(path):
         os.makedirs(path, exist_ok=True)
 

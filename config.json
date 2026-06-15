@@ -1,6 +1,6 @@
 {
   "app_name": "App_Downloader",
-  "ui_mode": "classic",
+  "ui_mode": "modern",
   "theme": "dark",
   "download_dir": "downloads/videos",
   "audio_dir": "downloads/audio",
