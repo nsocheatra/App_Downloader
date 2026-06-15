@@ -55,6 +55,10 @@ class AppDownloader(ctk.CTk):
         self.geometry("1200x850")
         self.minsize(1000, 700)
 
+        icon_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "app", "assets", "icons", "logo.ico")
+        if os.path.exists(icon_path):
+            self.iconbitmap(icon_path)
+
         self.config_manager = ConfigManager()
         self.history_db = HistoryDB()
 
