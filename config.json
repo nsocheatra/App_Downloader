@@ -1,0 +1,13 @@
+{
+  "app_name": "App_Downloader",
+  "ui_mode": "classic",
+  "theme": "dark",
+  "download_dir": "downloads/videos",
+  "audio_dir": "downloads/audio",
+  "filename_mode": "original",
+  "default_quality": "best",
+  "max_threads": 2,
+  "save_history": true,
+  "auto_detect_platform": true,
+  "check_updates_on_startup": true
+}
