@@ -1,25 +1,27 @@
 [Setup]
 AppName=App_Downloader
-AppVersion=1.0.0
-AppPublisher=App_Downloader
+AppVersion=1.1.0
 DefaultDirName={autopf}\App_Downloader
 DefaultGroupName=App_Downloader
-OutputDir=dist
+OutputDir=output
 OutputBaseFilename=App_Downloader_Setup
-SetupIconFile=app\assets\icons\logo.ico
-UninstallDisplayIcon={app}\App_Downloader.exe
-Compression=lzma2
+Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
 PrivilegesRequired=admin
+SetupIconFile=app\assets\icons\logo.ico
+UninstallDisplayIcon={app}\App_Downloader.exe
+
 
 [Files]
 Source: "dist\App_Downloader.exe"; DestDir: "{app}"; Flags: ignoreversion
 
+
 [Icons]
 Name: "{group}\App_Downloader"; Filename: "{app}\App_Downloader.exe"
 Name: "{group}\Uninstall App_Downloader"; Filename: "{uninstallexe}"
-Name: "{commondesktop}\App_Downloader"; Filename: "{app}\App_Downloader.exe"
+Name: "{autodesktop}\App_Downloader"; Filename: "{app}\App_Downloader.exe"
+
 
 [Run]
-Filename: "{app}\App_Downloader.exe"; Description: "Launch App_Downloader"; Flags: postinstall nowait skipifsilent
+Filename: "{app}\App_Downloader.exe"; Description: "Launch App_Downloader"; Flags: nowait postinstall skipifsilent

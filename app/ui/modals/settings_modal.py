@@ -118,7 +118,7 @@ class SettingsModal(ctk.CTkToplevel):
                         text_color="#e0e0e0"
                     )
                     entry.pack(side="right")
-                    entry.insert(0, self.config_data.get("download_dir", "downloads/videos"))
+                    entry.insert(0, self.config_data.get("download_dir"))
                     self.entries[key] = entry
 
                 else:

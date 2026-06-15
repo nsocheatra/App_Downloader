@@ -1,13 +1,14 @@
 import json
 import os
 
+_DOWNLOAD_BASE = os.path.join(os.path.expanduser("~"), "Downloads", "App_Downloader")
 
 DEFAULT_CONFIG = {
     "app_name": "App_Downloader",
     "ui_mode": "modern",
     "theme": "dark",
-    "download_dir": "downloads/videos",
-    "audio_dir": "downloads/audio",
+    "download_dir": os.path.join(_DOWNLOAD_BASE, "videos"),
+    "audio_dir": os.path.join(_DOWNLOAD_BASE, "audio"),
     "filename_mode": "original",
     "default_quality": "best",
     "max_threads": 2,

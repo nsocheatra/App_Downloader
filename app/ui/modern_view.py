@@ -479,7 +479,7 @@ class ModernView(ctk.CTkFrame):
             font=("Segoe UI", 12)
         )
         self.save_entry.pack(fill="x")
-        self.save_entry.insert(0, "downloads/videos")
+        self.save_entry.insert(0, self.app.config_manager.get("download_dir"))
 
         action_section = ctk.CTkFrame(content, corner_radius=16, fg_color=MODERN_THEME["card"])
         action_section.grid(row=4, column=0, padx=24, pady=10, sticky="ew")

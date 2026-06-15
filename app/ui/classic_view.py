@@ -270,7 +270,7 @@ class ClassicView(ctk.CTkFrame):
             text_color="#111827"
         )
         self.save_entry.grid(row=0, column=7, padx=(4, 16), pady=14)
-        self.save_entry.insert(0, "downloads/videos")
+        self.save_entry.insert(0, self.app.config_manager.get("download_dir"))
 
         action_card = ctk.CTkFrame(self, corner_radius=10, fg_color="#ffffff")
         action_card.grid(row=5, column=0, padx=24, pady=8, sticky="ew")

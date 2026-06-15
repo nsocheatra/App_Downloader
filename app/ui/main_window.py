@@ -319,9 +319,9 @@ class AppDownloader(ctk.CTk):
             filename_mode = self.get_filename_mode()
             filename_template = build_filename(filename_mode, platform_name, url)
 
-            download_dir = self.config_manager.get("download_dir", "downloads/videos")
+            download_dir = self.config_manager.get("download_dir")
             if is_audio or quality == "mp3":
-                download_dir = self.config_manager.get("audio_dir", "downloads/audio")
+                download_dir = self.config_manager.get("audio_dir")
 
             downloader = Downloader(download_dir=download_dir)
             info = downloader.download(
@@ -491,7 +491,7 @@ class AppDownloader(ctk.CTk):
             version_label.configure(text=f"Version {VERSION} (up to date)", text_color="#4ade80")
 
     def open_downloads_folder(self):
-        download_dir = self.config_manager.get("download_dir", "downloads/videos")
+        download_dir = self.config_manager.get("download_dir")
         open_folder(download_dir)
 
     def clear_history(self):

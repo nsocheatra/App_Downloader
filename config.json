@@ -1,9 +1,9 @@
 {
   "app_name": "App_Downloader",
-  "ui_mode": "modern",
+  "ui_mode": "classic",
   "theme": "dark",
-  "download_dir": "downloads/videos",
-  "audio_dir": "downloads/audio",
+  "download_dir": "~/Downloads/App_Downloader/videos",
+  "audio_dir": "~/Downloads/App_Downloader/audio",
   "filename_mode": "original",
   "default_quality": "best",
   "max_threads": 2,
