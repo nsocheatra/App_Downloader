@@ -2,7 +2,9 @@ import logging
 import os
 
 
-def setup_logger(log_dir="logs", log_file="app.log"):
+def setup_logger(log_dir=None, log_file="app.log"):
+    if log_dir is None:
+        log_dir = os.path.join(os.environ.get("LOCALAPPDATA", os.path.expanduser("~")), "App_Downloader", "logs")
     os.makedirs(log_dir, exist_ok=True)
     log_path = os.path.join(log_dir, log_file)
 

@@ -4,7 +4,10 @@ from datetime import datetime
 
 
 class HistoryDB:
-    def __init__(self, db_path="downloads/history.db"):
+    def __init__(self, db_path=None):
+        if db_path is None:
+            base = os.path.join(os.environ.get("LOCALAPPDATA", os.path.expanduser("~")), "App_Downloader")
+            db_path = os.path.join(base, "downloads", "history.db")
         self.db_path = db_path
         os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
         self.create_table()
