@@ -1,6 +1,7 @@
 import os
 import sys
 import io
+import subprocess
 import contextlib
 from urllib.parse import urlparse
 import yt_dlp
@@ -59,6 +60,13 @@ class Downloader:
                 "• Try changing the download location in Settings"
             )
 
+    def _ffmpeg_available(self):
+        try:
+            subprocess.run(["ffmpeg", "-version"], capture_output=True, check=True)
+            return True
+        except Exception:
+            return False
+
     def _build_opts(self, output_path, quality, progress_hook, generic=False):
         ydl_opts = {
             "outtmpl": output_path,
@@ -72,14 +80,16 @@ class Downloader:
         if generic:
             ydl_opts["force_generic_extractor"] = True
 
+        has_ffmpeg = self._ffmpeg_available()
+
         if quality == "best":
-            ydl_opts["format"] = "bestvideo+bestaudio/best"
+            ydl_opts["format"] = "bestvideo+bestaudio/best" if has_ffmpeg else "best"
         elif quality == "1080p":
-            ydl_opts["format"] = "bestvideo[height<=1080]+bestaudio/best[height<=1080]"
+            ydl_opts["format"] = "bestvideo[height<=1080]+bestaudio/best[height<=1080]" if has_ffmpeg else "best[height<=1080]"
         elif quality == "720p":
-            ydl_opts["format"] = "bestvideo[height<=720]+bestaudio/best[height<=720]"
+            ydl_opts["format"] = "bestvideo[height<=720]+bestaudio/best[height<=720]" if has_ffmpeg else "best[height<=720]"
         elif quality == "480p":
-            ydl_opts["format"] = "bestvideo[height<=480]+bestaudio/best[height<=480]"
+            ydl_opts["format"] = "bestvideo[height<=480]+bestaudio/best[height<=480]" if has_ffmpeg else "best[height<=480]"
         elif quality == "mp3":
             ydl_opts["format"] = "bestaudio/best"
             ydl_opts["postprocessors"] = [
@@ -95,6 +105,12 @@ class Downloader:
     def download(self, url, quality="best", filename_template="%(title)s.%(ext)s", progress_hook=None):
         output_path = os.path.join(self.download_dir, filename_template)
         last_error = None
+
+        if quality == "mp3" and not self._ffmpeg_available():
+            raise ValueError(
+                "Audio (MP3) download requires ffmpeg, which is not installed.\n\n"
+                "Please install ffmpeg or download as Video instead."
+            )
 
         for use_generic in [False, True]:
             try:
