@@ -29,11 +29,21 @@ class ConfigManager:
         self.config_path = config_path
         self.config = self.load_config()
 
+    def _expand_path(self, path):
+        if path and isinstance(path, str):
+            return os.path.expanduser(path)
+        return path
+
     def load_config(self):
         if os.path.exists(self.config_path):
             try:
                 with open(self.config_path, "r") as f:
-                    return {**DEFAULT_CONFIG, **json.load(f)}
+                    loaded = json.load(f)
+                if "download_dir" in loaded:
+                    loaded["download_dir"] = self._expand_path(loaded["download_dir"])
+                if "audio_dir" in loaded:
+                    loaded["audio_dir"] = self._expand_path(loaded["audio_dir"])
+                return {**DEFAULT_CONFIG, **loaded}
             except Exception:
                 return dict(DEFAULT_CONFIG)
         return dict(DEFAULT_CONFIG)
@@ -49,5 +59,7 @@ class ConfigManager:
         return self.config.get(key, default)
 
     def set(self, key, value):
+        if key in ("download_dir", "audio_dir"):
+            value = self._expand_path(value)
         self.config[key] = value
         self.save_config()

@@ -1,6 +1,6 @@
 [Setup]
 AppName=App_Downloader
-AppVersion=1.1.0
+AppVersion=1.2.0
 DefaultDirName={autopf}\App_Downloader
 DefaultGroupName=App_Downloader
 OutputDir=output
@@ -19,7 +19,6 @@ Source: "dist\App_Downloader.exe"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\App_Downloader"; Filename: "{app}\App_Downloader.exe"
-Name: "{group}\Uninstall App_Downloader"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\App_Downloader"; Filename: "{app}\App_Downloader.exe"
 
 

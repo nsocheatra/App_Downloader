@@ -42,9 +42,22 @@ def _silence_stderr():
 
 
 class Downloader:
-    def __init__(self, download_dir="downloads/videos"):
+    def __init__(self, download_dir=None):
+        if download_dir is None:
+            download_dir = os.path.join(os.path.expanduser("~"), "Downloads", "App_Downloader", "videos")
         self.download_dir = download_dir
-        os.makedirs(self.download_dir, exist_ok=True)
+        try:
+            os.makedirs(self.download_dir, exist_ok=True)
+        except PermissionError:
+            raise PermissionError(
+                f"Access denied: Cannot create or access the download folder.\n\n"
+                f"Path: {self.download_dir}\n\n"
+                "Please check:\n"
+                "• The folder is not set to 'Read-only'\n"
+                "• You have write permissions for this location\n"
+                "• The folder path is valid and not corrupted\n"
+                "• Try changing the download location in Settings"
+            )
 
     def _build_opts(self, output_path, quality, progress_hook, generic=False):
         ydl_opts = {

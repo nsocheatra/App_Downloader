@@ -356,6 +356,16 @@ class AppDownloader(ctk.CTk):
                 except Exception:
                     pass
 
+        except PermissionError as e:
+            if hasattr(self.current_view, "progress"):
+                self.current_view.progress.stop()
+                self.current_view.progress.configure(mode="determinate")
+            err_msg = str(e)
+            logger.error(f"Permission error: {e}", exc_info=True)
+            self.update_status("Error: Access denied to download folder", "#f87171")
+            ErrorModal(self, "Folder Access Denied", err_msg)
+            self.current_view.set_progress(0)
+
         except Exception as e:
             if hasattr(self.current_view, "progress"):
                 self.current_view.progress.stop()
@@ -491,8 +501,13 @@ class AppDownloader(ctk.CTk):
             version_label.configure(text=f"Version {VERSION} (up to date)", text_color="#4ade80")
 
     def open_downloads_folder(self):
-        download_dir = self.config_manager.get("download_dir")
-        open_folder(download_dir)
+        try:
+            download_dir = self.config_manager.get("download_dir")
+            open_folder(download_dir)
+        except PermissionError as e:
+            ErrorModal(self, "Folder Access Denied", str(e))
+        except Exception as e:
+            ErrorModal(self, "Error", f"Could not open folder:\n{e}")
 
     def clear_history(self):
         self.history_db.clear_history()
