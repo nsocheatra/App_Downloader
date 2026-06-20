@@ -9,6 +9,7 @@ class UpdateChecker:
         self.on_result = on_result
         self.latest_version = None
         self.download_url = None
+        self.exe_download_url = None
         self.has_update = False
 
     def check(self):
@@ -27,6 +28,11 @@ class UpdateChecker:
             match = re.search(r"[\d.]+", tag)
             self.latest_version = match.group(0) if match else tag.lstrip("v")
             self.download_url = data.get("html_url", "")
+
+            for asset in data.get("assets", []):
+                if asset["name"].endswith(".exe") and "Setup" not in asset["name"]:
+                    self.exe_download_url = asset["browser_download_url"]
+                    break
 
             def parse(v):
                 return tuple(int(x) for x in v.split("."))

@@ -1,7 +1,9 @@
 import sys
 import threading
 import os
+import subprocess
 import customtkinter as ctk
+from tkinter import messagebox
 
 from app.core.downloader import Downloader
 from app.core.filename_manager import build_filename
@@ -416,15 +418,15 @@ class AppDownloader(ctk.CTk):
 
     def _show_update_notification(self, checker):
         self.update_status(f"Update v{checker.latest_version} available", "#22c55e")
-        app = self
+        app_ref = self
 
         class UpdateNotification(ctk.CTkToplevel):
             def __init__(self):
-                super().__init__(app)
+                super().__init__(app_ref)
                 self.title("Update Available")
-                self.geometry("400x200")
+                self.geometry("420x260")
                 self.resizable(False, False)
-                self.transient(app)
+                self.transient(app_ref)
                 self.grab_set()
 
                 ctk.CTkLabel(
@@ -432,7 +434,7 @@ class AppDownloader(ctk.CTk):
                     text="Update Available",
                     font=("Segoe UI", 20, "bold"),
                     text_color="#e0e0e0"
-                ).pack(pady=(24, 8))
+                ).pack(pady=(20, 6))
 
                 ctk.CTkLabel(
                     self,
@@ -443,27 +445,32 @@ class AppDownloader(ctk.CTk):
 
                 ctk.CTkLabel(
                     self,
-                    text=f"You are currently on version {VERSION}.",
-                    font=("Segoe UI", 13),
+                    text=f"You are on v{VERSION}. Click Update to auto-install.",
+                    font=("Segoe UI", 12),
                     text_color="#64748b"
-                ).pack(pady=(0, 16))
+                ).pack(pady=(0, 12))
 
-                btn_frame = ctk.CTkFrame(self, fg_color="transparent")
-                btn_frame.pack()
+                self.progress = ctk.CTkProgressBar(
+                    self, width=300, height=6,
+                    corner_radius=3, fg_color="#1e2448", progress_color="#22c55e"
+                )
+
+                self.btn_frame = ctk.CTkFrame(self, fg_color="transparent")
+                self.btn_frame.pack()
 
                 ctk.CTkButton(
-                    btn_frame,
-                    text="Download",
+                    self.btn_frame,
+                    text="Update & Restart",
                     height=38,
                     corner_radius=10,
                     fg_color="#22c55e",
                     hover_color="#16a34a",
                     font=("Segoe UI", 13, "bold"),
-                    command=lambda: self._open_url(checker.download_url)
+                    command=self._do_update
                 ).pack(side="left", padx=6)
 
                 ctk.CTkButton(
-                    btn_frame,
+                    self.btn_frame,
                     text="Later",
                     height=38,
                     corner_radius=10,
@@ -472,10 +479,90 @@ class AppDownloader(ctk.CTk):
                     command=self.destroy
                 ).pack(side="left", padx=6)
 
-            def _open_url(self, url):
-                import webbrowser
-                webbrowser.open(url)
-                self.destroy()
+            def _do_update(self):
+                exe_url = checker.exe_download_url
+                if not exe_url:
+                    messagebox.showwarning(
+                        "No Download Link",
+                        "Could not find the download URL.\nPlease update manually from the release page."
+                    )
+                    return
+                self._download_and_install(exe_url)
+
+            def _download_and_install(self, url):
+                self.progress.pack(pady=(0, 12))
+                self.progress.configure(mode="indeterminate")
+                self.progress.start()
+                for child in self.btn_frame.winfo_children():
+                    child.configure(state="disabled")
+                thread = threading.Thread(target=self._download_worker, args=(url,), daemon=True)
+                thread.start()
+
+            def _download_worker(self, url):
+                try:
+                    resp = requests.get(url, timeout=120, stream=True)
+                    resp.raise_for_status()
+                    total = int(resp.headers.get("content-length", 0))
+                    downloaded = 0
+                    chunks = []
+                    for chunk in resp.iter_content(chunk_size=8192):
+                        if chunk:
+                            chunks.append(chunk)
+                            downloaded += len(chunk)
+                            if total:
+                                pct = downloaded / total
+                                def setp(v=pct):
+                                    self._set_progress(v)
+                                self.after(0, setp)
+
+                    data = b"".join(chunks)
+                    temp_exe = os.path.join(
+                        os.environ.get("TEMP", "."),
+                        f"App_Downloader_v{checker.latest_version}.exe"
+                    )
+                    with open(temp_exe, "wb") as f:
+                        f.write(data)
+
+                    current_exe = os.path.abspath(
+                        sys.executable if getattr(sys, 'frozen', False) else __file__
+                    )
+                    bat_path = os.path.join(os.environ.get("TEMP", "."), "update_app.bat")
+                    bat_content = (
+                        '@echo off\n'
+                        'title Updating App_Downloader...\n'
+                        'timeout /t 2 /nobreak >nul\n'
+                        f':retry\n'
+                        f'copy /Y "{temp_exe}" "{current_exe}" >nul 2>&1\n'
+                        f'if errorlevel 1 (\n'
+                        f'  timeout /t 2 /nobreak >nul\n'
+                        f'  goto retry\n'
+                        f')\n'
+                        f'start "" "{current_exe}"\n'
+                        f'del "{temp_exe}"\n'
+                        f'del "%~f0"\n'
+                    )
+                    with open(bat_path, "w") as f:
+                        f.write(bat_content)
+
+                    subprocess.Popen(
+                        ["cmd", "/c", bat_path],
+                        creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0)
+                    )
+                    self.master.quit()
+                    self.master.destroy()
+
+                except Exception as e:
+                    self.after(0, lambda msg=str(e): messagebox.showerror(
+                        "Update Failed",
+                        f"Could not download update:\n{msg}\n\nTry downloading manually from the release page."
+                    ))
+                    self.after(0, self.destroy)
+
+            def _set_progress(self, value):
+                if self.progress.cget("mode") == "indeterminate":
+                    self.progress.stop()
+                    self.progress.configure(mode="determinate")
+                self.progress.set(value)
 
         UpdateNotification()
 
