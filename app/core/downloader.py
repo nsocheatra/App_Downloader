@@ -3,6 +3,7 @@ import sys
 import io
 import subprocess
 import contextlib
+import requests
 from urllib.parse import urlparse
 import yt_dlp
 
@@ -60,12 +61,50 @@ class Downloader:
                 "• Try changing the download location in Settings"
             )
 
-    def _ffmpeg_available(self):
+    @staticmethod
+    def _get_ffmpeg_path():
+        """Locate ffmpeg: check PATH first, then app data directory."""
         try:
             subprocess.run(["ffmpeg", "-version"], capture_output=True, check=True)
-            return True
+            return "ffmpeg"
         except Exception:
-            return False
+            pass
+        ffmpeg_dir = os.path.join(os.environ.get("LOCALAPPDATA", os.path.expanduser("~")), "App_Downloader", "bin")
+        ffmpeg_path = os.path.join(ffmpeg_dir, "ffmpeg.exe")
+        if os.path.exists(ffmpeg_path):
+            return ffmpeg_path
+        return None
+
+    @staticmethod
+    def _ensure_ffmpeg():
+        path = Downloader._get_ffmpeg_path()
+        if path:
+            return path
+        ffmpeg_dir = os.path.join(os.environ.get("LOCALAPPDATA", os.path.expanduser("~")), "App_Downloader", "bin")
+        os.makedirs(ffmpeg_dir, exist_ok=True)
+        ffmpeg_path = os.path.join(ffmpeg_dir, "ffmpeg.exe")
+        url = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip"
+        zip_path = ffmpeg_path + ".zip"
+        try:
+            resp = requests.get(url, timeout=30, stream=True)
+            resp.raise_for_status()
+            with open(zip_path, "wb") as f:
+                for chunk in resp.iter_content(8192):
+                    if chunk:
+                        f.write(chunk)
+            import zipfile
+            with zipfile.ZipFile(zip_path) as z:
+                for name in z.namelist():
+                    if name.endswith("ffmpeg.exe"):
+                        with z.open(name) as src, open(ffmpeg_path, "wb") as dst:
+                            dst.write(src.read())
+                        break
+            os.remove(zip_path)
+            if os.path.exists(ffmpeg_path):
+                return ffmpeg_path
+        except Exception:
+            pass
+        return None
 
     def _build_opts(self, output_path, quality, progress_hook, generic=False):
         ydl_opts = {
@@ -80,16 +119,19 @@ class Downloader:
         if generic:
             ydl_opts["force_generic_extractor"] = True
 
-        has_ffmpeg = self._ffmpeg_available()
+        ffmpeg_path = self._ensure_ffmpeg()
+        if ffmpeg_path:
+            ydl_opts["ffmpeg_location"] = ffmpeg_path
+            ydl_opts["prefer_ffmpeg"] = True
 
         if quality == "best":
-            ydl_opts["format"] = "bestvideo+bestaudio/best" if has_ffmpeg else "best"
+            ydl_opts["format"] = "bestvideo+bestaudio/best"
         elif quality == "1080p":
-            ydl_opts["format"] = "bestvideo[height<=1080]+bestaudio/best[height<=1080]" if has_ffmpeg else "best[height<=1080]"
+            ydl_opts["format"] = "bestvideo[height<=1080]+bestaudio/best[height<=1080]"
         elif quality == "720p":
-            ydl_opts["format"] = "bestvideo[height<=720]+bestaudio/best[height<=720]" if has_ffmpeg else "best[height<=720]"
+            ydl_opts["format"] = "bestvideo[height<=720]+bestaudio/best[height<=720]"
         elif quality == "480p":
-            ydl_opts["format"] = "bestvideo[height<=480]+bestaudio/best[height<=480]" if has_ffmpeg else "best[height<=480]"
+            ydl_opts["format"] = "bestvideo[height<=480]+bestaudio/best[height<=480]"
         elif quality == "mp3":
             ydl_opts["format"] = "bestaudio/best"
             ydl_opts["postprocessors"] = [
@@ -105,12 +147,6 @@ class Downloader:
     def download(self, url, quality="best", filename_template="%(title)s.%(ext)s", progress_hook=None):
         output_path = os.path.join(self.download_dir, filename_template)
         last_error = None
-
-        if quality == "mp3" and not self._ffmpeg_available():
-            raise ValueError(
-                "Audio (MP3) download requires ffmpeg, which is not installed.\n\n"
-                "Please install ffmpeg or download as Video instead."
-            )
 
         for use_generic in [False, True]:
             try:
