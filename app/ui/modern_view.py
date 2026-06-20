@@ -626,12 +626,11 @@ class ModernView(ctk.CTkFrame):
 
     def paste_url(self):
         try:
-            import pyperclip
-            text = pyperclip.paste()
+            text = self.clipboard_get()
             if text:
                 self.url_entry.delete(0, "end")
                 self.url_entry.insert(0, text)
-        except ImportError:
+        except Exception:
             pass
 
     def open_quality_selector(self):
