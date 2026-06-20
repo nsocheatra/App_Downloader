@@ -108,15 +108,19 @@ class Downloader:
                 if not use_generic:
                     continue
                 has_extractor = _has_extractor_for(url)
+                detail = str(e).strip() or "No additional details"
                 if has_extractor:
                     error_msg = (
                         f"Unable to download from this URL.\n\n"
-                        "This URL format is not supported. Try using a direct video/post URL\n"
-                        "instead of a profile or playlist page."
+                        f"Details: {detail}\n\n"
+                        "Try using a direct video/post URL instead of a profile or playlist page.\n"
+                        "If the issue persists, the video may be private, age-restricted,\n"
+                        "or require login."
                     )
                 else:
                     error_msg = (
                         f"Unsupported platform.\n\n"
+                        f"Details: {detail}\n\n"
                         "This platform has no extractor in the download engine.\n"
                         "The site may require login, use JavaScript-based video players,\n"
                         "or have DRM protection that cannot be bypassed."
