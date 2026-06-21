@@ -48,6 +48,7 @@ class Downloader:
         if download_dir is None:
             download_dir = os.path.join(os.path.expanduser("~"), "Downloads", "App_Downloader", "videos")
         self.download_dir = download_dir
+        self._ffmpeg_path = None
         try:
             os.makedirs(self.download_dir, exist_ok=True)
         except PermissionError:
@@ -69,20 +70,23 @@ class Downloader:
             return "ffmpeg"
         except Exception:
             pass
-        search_dirs = []
-        if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
-            search_dirs.append(sys._MEIPASS)
-        search_dirs.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-        search_dirs.append(os.path.dirname(sys.executable))
-        seen = set()
-        for base in search_dirs:
+        checked = set()
+        candidates = []
+        if getattr(sys, 'frozen', False):
+            meipass = getattr(sys, '_MEIPASS', None)
+            if meipass:
+                candidates.append(meipass)
+            candidates.append(os.path.dirname(sys.executable))
+        candidates.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+        for base in candidates:
             resolved = os.path.realpath(base)
-            if resolved in seen:
+            if resolved in checked:
                 continue
-            seen.add(resolved)
-            bundled_path = os.path.join(base, "bin", "ffmpeg.exe")
-            if os.path.exists(bundled_path):
-                return bundled_path
+            checked.add(resolved)
+            for sub in ["bin", "ffmpeg"]:
+                candidate = os.path.join(base, sub, "ffmpeg.exe")
+                if os.path.exists(candidate):
+                    return candidate
         ffmpeg_dir = os.path.join(os.environ.get("LOCALAPPDATA", os.path.expanduser("~")), "App_Downloader", "bin")
         ffmpeg_path = os.path.join(ffmpeg_dir, "ffmpeg.exe")
         if os.path.exists(ffmpeg_path):
@@ -134,28 +138,32 @@ class Downloader:
         if generic:
             ydl_opts["force_generic_extractor"] = True
 
-        ffmpeg_path = self._ensure_ffmpeg()
-        if ffmpeg_path:
-            ydl_opts["ffmpeg_location"] = ffmpeg_path
+        if self._ffmpeg_path is None:
+            self._ffmpeg_path = self._ensure_ffmpeg()
+        if self._ffmpeg_path:
+            ydl_opts["ffmpeg_location"] = self._ffmpeg_path
             ydl_opts["prefer_ffmpeg"] = True
 
+        has_ffmpeg = bool(self._ffmpeg_path)
+
         if quality == "best":
-            ydl_opts["format"] = "bestvideo+bestaudio/best"
+            ydl_opts["format"] = "bestvideo+bestaudio/best" if has_ffmpeg else "best"
         elif quality == "1080p":
-            ydl_opts["format"] = "bestvideo[height<=1080]+bestaudio/best[height<=1080]"
+            ydl_opts["format"] = "bestvideo[height<=1080]+bestaudio/best[height<=1080]" if has_ffmpeg else "best[height<=1080]"
         elif quality == "720p":
-            ydl_opts["format"] = "bestvideo[height<=720]+bestaudio/best[height<=720]"
+            ydl_opts["format"] = "bestvideo[height<=720]+bestaudio/best[height<=720]" if has_ffmpeg else "best[height<=720]"
         elif quality == "480p":
-            ydl_opts["format"] = "bestvideo[height<=480]+bestaudio/best[height<=480]"
+            ydl_opts["format"] = "bestvideo[height<=480]+bestaudio/best[height<=480]" if has_ffmpeg else "best[height<=480]"
         elif quality == "mp3":
             ydl_opts["format"] = "bestaudio/best"
-            ydl_opts["postprocessors"] = [
-                {
-                    "key": "FFmpegExtractAudio",
-                    "preferredcodec": "mp3",
-                    "preferredquality": "192",
-                }
-            ]
+            if has_ffmpeg:
+                ydl_opts["postprocessors"] = [
+                    {
+                        "key": "FFmpegExtractAudio",
+                        "preferredcodec": "mp3",
+                        "preferredquality": "192",
+                    }
+                ]
 
         return ydl_opts
 
