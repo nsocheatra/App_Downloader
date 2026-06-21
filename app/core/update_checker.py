@@ -11,6 +11,7 @@ class UpdateChecker:
         self.download_url = None
         self.exe_download_url = None
         self.has_update = False
+        self.check_error = None
 
     def check(self):
         thread = threading.Thread(target=self._check_worker, daemon=True)
@@ -26,12 +27,13 @@ class UpdateChecker:
     def _check_worker(self):
         try:
             self._check_via_api()
-        except Exception:
+        except Exception as e:
             try:
                 self._check_via_raw()
-            except Exception:
+            except Exception as e2:
                 self.latest_version = None
                 self.has_update = False
+                self.check_error = f"{e}\nFallback: {e2}"
 
         if self.on_result:
             self.on_result(self)
@@ -69,6 +71,6 @@ class UpdateChecker:
         self.download_url = f"https://github.com/{REPO_OWNER}/{REPO_NAME}/releases/tag/v{self.latest_version}"
         self.exe_download_url = (
             f"https://github.com/{REPO_OWNER}/{REPO_NAME}/releases/download/"
-            f"v{self.latest_version}/App_Downloader.exe"
+            f"v{self.latest_version}/App_Downloader_v{self.latest_version}.exe"
         )
         self.has_update = self._version_tuple(self.latest_version) > self._version_tuple(VERSION)

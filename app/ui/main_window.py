@@ -580,7 +580,9 @@ class AppDownloader(ctk.CTk):
         checker.check()
 
     def _on_about_update_result(self, checker, version_label):
-        if checker.has_update:
+        if checker.check_error:
+            version_label.configure(text="Check failed — tap to retry", text_color="#f87171")
+        elif checker.has_update:
             version_label.configure(
                 text=f"Update v{checker.latest_version} available",
                 text_color="#22c55e"
