@@ -1,6 +1,7 @@
 import os
 import sys
 import io
+import shutil
 import subprocess
 import contextlib
 import requests
@@ -67,6 +68,9 @@ class Downloader:
         """Locate ffmpeg: check PATH first, then bundled with app, then app data directory."""
         try:
             subprocess.run(["ffmpeg", "-version"], capture_output=True, check=True)
+            path = shutil.which("ffmpeg")
+            if path:
+                return path
             return "ffmpeg"
         except Exception:
             pass
