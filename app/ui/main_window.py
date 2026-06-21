@@ -237,12 +237,14 @@ class AppDownloader(ctk.CTk):
             return
 
         self.selected_platform = self.get_platform_selection()
-
+        if not self.selected_platform:
+            if hasattr(self.current_view, "detected_platform") and self.current_view.detected_platform:
+                self.selected_platform = self.current_view.detected_platform
         if not self.selected_platform:
             self.detect_platform()
-            if not self.selected_platform:
-                self.update_status("Could not detect platform. Select one manually.", "#f87171")
-                return
+        if not self.selected_platform:
+            self.update_status("Could not detect platform. Paste a valid URL.", "#f87171")
+            return
 
         if not self.selected_platform["supported"]:
             self.update_status("This platform is not supported yet", "#f87171")
@@ -250,13 +252,12 @@ class AppDownloader(ctk.CTk):
 
         is_audio = False
         if hasattr(self.current_view, "filetype_menu"):
-            is_audio = self.current_view.filetype_menu.get() == "Audio"
+            is_audio = self.current_view.filetype_menu.get().startswith("Audio")
 
         self.cancel_flag = False
-        if hasattr(self.current_view, "progress"):
-            self.current_view.progress.configure(mode="indeterminate")
-            self.current_view.progress.start()
+        self.current_view.set_progress(0)
         self.update_status("Starting download...", "#fbbf24")
+        self.current_view.set_downloading_state(True)
 
         self.download_thread = threading.Thread(target=self.download_worker, args=(url, is_audio))
         self.download_thread.daemon = True
@@ -270,20 +271,22 @@ class AppDownloader(ctk.CTk):
 
         self.selected_platform = self.get_platform_selection()
         if not self.selected_platform:
+            if hasattr(self.current_view, "detected_platform") and self.current_view.detected_platform:
+                self.selected_platform = self.current_view.detected_platform
+        if not self.selected_platform:
             self.detect_platform()
-            if not self.selected_platform:
-                self.update_status("Could not detect platform", "#f87171")
-                return
+        if not self.selected_platform:
+            self.update_status("Could not detect platform", "#f87171")
+            return
 
         if not self.selected_platform["supported"]:
             self.update_status("This platform is not supported yet", "#f87171")
             return
 
         self.cancel_flag = False
-        if hasattr(self.current_view, "progress"):
-            self.current_view.progress.configure(mode="indeterminate")
-            self.current_view.progress.start()
+        self.current_view.set_progress(0)
         self.update_status("Starting audio download...", "#fbbf24")
+        self.current_view.set_downloading_state(True)
 
         self.download_thread = threading.Thread(target=self.download_worker, args=(url, True))
         self.download_thread.daemon = True
@@ -292,6 +295,8 @@ class AppDownloader(ctk.CTk):
     def cancel_download(self):
         self.cancel_flag = True
         self.update_status("Cancelling...", "#f87171")
+        if hasattr(self.current_view, "set_downloading_state"):
+            self.current_view.set_downloading_state(False)
 
     def progress_hook(self, d):
         if self.cancel_flag:
@@ -359,9 +364,6 @@ class AppDownloader(ctk.CTk):
                     pass
 
         except PermissionError as e:
-            if hasattr(self.current_view, "progress"):
-                self.current_view.progress.stop()
-                self.current_view.progress.configure(mode="determinate")
             err_msg = str(e)
             logger.error(f"Permission error: {e}", exc_info=True)
             self.update_status("Error: Access denied to download folder", "#f87171")
@@ -369,9 +371,6 @@ class AppDownloader(ctk.CTk):
             self.current_view.set_progress(0)
 
         except Exception as e:
-            if hasattr(self.current_view, "progress"):
-                self.current_view.progress.stop()
-                self.current_view.progress.configure(mode="determinate")
             err_msg = str(e)
             if "cancelled by user" in err_msg.lower():
                 self.update_status("Download cancelled", "#f87171")
@@ -383,6 +382,10 @@ class AppDownloader(ctk.CTk):
                     suggestion = "Check the URL or try another supported platform."
                 ErrorModal(self, "Download Failed", err_msg, suggestion)
             self.current_view.set_progress(0)
+
+        finally:
+            if hasattr(self.current_view, "set_downloading_state"):
+                self.after(0, self.current_view.set_downloading_state, False)
 
     def update_status(self, text, color="#8899aa"):
         if hasattr(self.current_view, "update_status"):

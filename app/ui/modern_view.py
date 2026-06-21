@@ -1,20 +1,25 @@
 import customtkinter as ctk
-from app.ui.modals.settings_modal import SettingsModal
-from app.ui.modals.download_details_modal import DownloadDetailsModal
+import tkinter as tk
+from app.core.platform_detector import detect_platform
 from app.ui.modals.platform_info_modal import PlatformInfoModal
 from app.ui.modals.quality_selector_modal import QualitySelectorModal
 from app.ui.modals.error_modal import ErrorModal
-from app.ui.modals.about_modal import AboutModal
-from app.core.theme_manager import MODERN_THEME
+from app.version import VERSION
 
-
-SIDEBAR_ITEMS = [
-    ("Home", "⌂"),
-    ("Downloads", "⬇"),
-    ("History", "⏱"),
-    ("Settings", "⚙"),
-    ("About", "ℹ"),
-]
+BG = "#0F172A"
+SURFACE = "#1E293B"
+SURFACE_HOVER = "#24344D"
+PRIMARY = "#2563EB"
+PRIMARY_HOVER = "#1d4ed8"
+TEXT = "#f1f5f9"
+MUTED = "#64748b"
+BORDER = "#334155"
+DANGER = "#dc2626"
+DANGER_HOVER = "#b91c1c"
+SUCCESS = "#22c55e"
+CARD_RADIUS = 12
+INPUT_RADIUS = 10
+BTN_RADIUS = 10
 
 PLATFORMS = [
     {"name": "TikTok", "key": "tiktok", "color": "#ff2d55", "domains": ["tiktok.com"], "supported": True},
@@ -43,584 +48,317 @@ PLATFORMS = [
     {"name": "Pear Video", "key": "pear", "color": "#00bcd4", "domains": ["pearvideo.com"], "supported": True},
 ]
 
-
-class PlatformCard(ctk.CTkFrame):
-    def __init__(self, master, platform, on_select, on_info):
-        super().__init__(
-            master,
-            corner_radius=14,
-            fg_color=MODERN_THEME["card"],
-            border_width=1,
-            border_color=MODERN_THEME["border"]
-        )
-        self.platform = platform
-        self.on_select = on_select
-        self.on_info = on_info
-        self.is_selected = False
-        self.build_card()
-        self.bind_hover_events(self)
-
-    def bind_hover_events(self, widget):
-        widget.bind("<Enter>", self.on_enter)
-        widget.bind("<Leave>", self.on_leave)
-        for child in widget.winfo_children():
-            if not isinstance(child, ctk.CTkButton):
-                self.bind_hover_events(child)
-
-    def on_enter(self, event):
-        if not self.is_selected:
-            self.configure(border_color=self.platform["color"], fg_color=MODERN_THEME["card_hover"])
-
-    def on_leave(self, event):
-        if not self.is_selected:
-            self.configure(border_color=MODERN_THEME["border"], fg_color=MODERN_THEME["card"])
-
-    def build_card(self):
-        color = self.platform["color"]
-
-        inner = ctk.CTkFrame(self, fg_color="transparent")
-        inner.pack(fill="both", expand=True, padx=14, pady=14)
-
-        icon_frame = ctk.CTkFrame(
-            inner,
-            width=42,
-            height=42,
-            corner_radius=10,
-            fg_color=color
-        )
-        icon_frame.pack(side="left")
-        icon_frame.pack_propagate(False)
-
-        ctk.CTkLabel(
-            icon_frame,
-            text=self.platform["name"][0].upper(),
-            font=("Segoe UI", 16, "bold"),
-            text_color="#ffffff"
-        ).pack(expand=True)
-
-        text_col = ctk.CTkFrame(inner, fg_color="transparent")
-        text_col.pack(side="left", fill="x", expand=True, padx=(10, 0))
-
-        ctk.CTkLabel(
-            text_col,
-            text=self.platform["name"],
-            font=("Segoe UI", 13, "bold"),
-            text_color="#f1f5f9",
-            anchor="w"
-        ).pack(anchor="w")
-
-        badge_text = "Supported" if self.platform["supported"] else "Coming Soon"
-        badge_color = "#22c55e" if self.platform["supported"] else "#f59e0b"
-        ctk.CTkLabel(
-            text_col,
-            text=badge_text,
-            font=("Segoe UI", 10),
-            text_color=badge_color,
-            anchor="w"
-        ).pack(anchor="w")
-
-        btn_col = ctk.CTkFrame(inner, fg_color="transparent")
-        btn_col.pack(side="right")
-
-        ctk.CTkButton(
-            btn_col,
-            text="Select",
-            height=28,
-            width=64,
-            corner_radius=8,
-            fg_color=color,
-            hover_color=color,
-            font=("Segoe UI", 11, "bold"),
-            command=lambda: self.on_select(self.platform)
-        ).pack(side="top", pady=(0, 3))
-
-        ctk.CTkButton(
-            btn_col,
-            text="i",
-            height=22,
-            width=64,
-            corner_radius=6,
-            fg_color="#1c2140",
-            hover_color="#252b50",
-            font=("Segoe UI", 11, "bold"),
-            text_color="#64748b",
-            command=lambda: self.on_info(self.platform)
-        ).pack(side="top")
-
-    def set_selected(self, selected):
-        self.is_selected = selected
-        if selected:
-            self.configure(
-                border_width=2,
-                border_color=self.platform["color"],
-                fg_color=MODERN_THEME["card_light"]
-            )
-        else:
-            self.configure(
-                border_width=1,
-                border_color=MODERN_THEME["border"],
-                fg_color=MODERN_THEME["card"]
-            )
+PLATFORM_SHORT = {
+    "tiktok": "TT", "facebook": "FB", "youtube": "YT", "instagram": "IG",
+    "pinterest": "PT", "douyin": "DY", "vimeo": "VM", "bilibili": "BL",
+    "dailymotion": "DM", "kwai": "KW", "likee": "LK", "twitter": "TW",
+    "dramabox": "DB", "shortdrama": "SD", "reelshort": "RS", "youku": "YK",
+    "iqiyi": "IQ", "tencent": "TC", "mango": "MG", "sohu": "SH",
+    "acfun": "AF", "xigua": "XG", "weibo": "WB", "pear": "PR",
+}
 
 
 class ModernView(ctk.CTkFrame):
     def __init__(self, parent, app_controller):
-        super().__init__(parent, fg_color=MODERN_THEME["background"])
+        super().__init__(parent, fg_color=BG)
         self.app = app_controller
         self.selected_platform = None
-        self.cards = {}
+        self.detected_platform = None
+        self.is_downloading = False
         self.build_ui()
 
     def build_ui(self):
-        self.grid_columnconfigure(1, weight=1)
-        self.grid_rowconfigure(0, weight=1)
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(1, weight=1)
 
-        sidebar = ctk.CTkFrame(
-            self,
-            width=200,
-            corner_radius=0,
-            fg_color=MODERN_THEME["sidebar_bg"]
-        )
-        sidebar.grid(row=0, column=0, sticky="ns")
-        sidebar.grid_propagate(False)
-
-        logo_frame = ctk.CTkFrame(sidebar, fg_color="transparent")
-        logo_frame.pack(fill="x", padx=20, pady=(24, 28))
-
-        badge = ctk.CTkFrame(
-            logo_frame,
-            width=36,
-            height=36,
-            corner_radius=10,
-            fg_color="#8b5cf6"
-        )
-        badge.pack(side="left")
-        badge.pack_propagate(False)
-
-        ctk.CTkLabel(
-            badge,
-            text="AD",
-            font=("Segoe UI", 16, "bold"),
-            text_color="#ffffff"
-        ).pack(expand=True)
-
-        ctk.CTkLabel(
-            logo_frame,
-            text="App_Downloader",
-            font=("Segoe UI", 16, "bold"),
-            text_color="#f1f5f9"
-        ).pack(side="left", padx=(10, 0))
-
-        for text, icon in SIDEBAR_ITEMS:
-            cmd = self.app.open_settings if text == "Settings" else (
-                self.app.open_about if text == "About" else lambda: None
-            )
-            btn = ctk.CTkButton(
-                sidebar,
-                text=f"  {icon}  {text}",
-                height=40,
-                corner_radius=10,
-                fg_color="#8b5cf6" if text == "Home" else "transparent",
-                text_color="#ffffff" if text == "Home" else "#64748b",
-                hover_color="#1a1f3a",
-                anchor="w",
-                font=("Segoe UI", 13),
-                command=cmd
-            )
-            btn.pack(fill="x", padx=14, pady=3)
-
-        self.mode_btn = ctk.CTkButton(
-            sidebar,
-            text="  🔄  Classic Mode",
-            height=40,
-            corner_radius=10,
-            fg_color="transparent",
-            text_color="#64748b",
-            hover_color="#1a1f3a",
-            anchor="w",
-            font=("Segoe UI", 12),
-            command=self.app.switch_ui_mode
-        )
-        self.mode_btn.pack(side="bottom", fill="x", padx=14, pady=20)
-
-        sidebar_status = ctk.CTkFrame(sidebar, fg_color="transparent")
-        sidebar_status.pack(side="bottom", fill="x", padx=14, pady=(0, 16))
-
-        status_dot = ctk.CTkFrame(
-            sidebar_status,
-            width=8,
-            height=8,
-            corner_radius=4,
-            fg_color="#22c55e"
-        )
-        status_dot.pack(side="left")
-
-        ctk.CTkLabel(
-            sidebar_status,
-            text="Ready",
-            font=("Segoe UI", 11),
-            text_color="#64748b"
-        ).pack(side="left", padx=(6, 0))
-
-        content = ctk.CTkScrollableFrame(
-            self,
-            corner_radius=0,
-            fg_color="transparent"
-        )
-        content.grid(row=0, column=1, sticky="nsew")
+        self.build_topbar()
+        content = ctk.CTkScrollableFrame(self, corner_radius=0, fg_color="transparent")
+        content.grid(row=1, column=0, sticky="nsew")
         content.grid_columnconfigure(0, weight=1)
 
-        header_card = ctk.CTkFrame(content, corner_radius=16, fg_color=MODERN_THEME["card"])
-        header_card.grid(row=0, column=0, padx=24, pady=(24, 14), sticky="ew")
-        header_card.grid_columnconfigure(0, weight=1)
+        self.build_workspace(content)
+        self.build_queue_section(content)
 
-        ctk.CTkLabel(
-            header_card,
-            text="Video Downloader Dashboard",
-            font=("Segoe UI", 24, "bold"),
-            text_color="#f1f5f9"
-        ).grid(row=0, column=0, padx=22, pady=20, sticky="w")
+    def build_topbar(self):
+        bar = ctk.CTkFrame(self, height=48, fg_color=SURFACE, corner_radius=0)
+        bar.grid(row=0, column=0, sticky="ew")
+        bar.grid_propagate(False)
 
-        url_card = ctk.CTkFrame(content, corner_radius=16, fg_color=MODERN_THEME["card"])
-        url_card.grid(row=1, column=0, padx=24, pady=10, sticky="ew")
-        url_card.grid_columnconfigure(0, weight=1)
+        inner = ctk.CTkFrame(bar, fg_color="transparent")
+        inner.pack(fill="both", expand=True, padx=20)
 
-        url_label = ctk.CTkLabel(
-            url_card,
-            text="Paste a video URL to get started",
-            font=("Segoe UI", 12),
-            text_color="#64748b"
-        )
-        url_label.grid(row=0, column=0, padx=22, pady=(14, 6), sticky="sw")
+        badge = ctk.CTkFrame(inner, width=28, height=28, corner_radius=7, fg_color=PRIMARY)
+        badge.pack(side="left")
+        badge.pack_propagate(False)
+        ctk.CTkLabel(badge, text="AD", font=("Segoe UI", 12, "bold"), text_color="#fff").pack(expand=True)
 
-        url_row = ctk.CTkFrame(url_card, fg_color="transparent")
-        url_row.grid(row=1, column=0, padx=22, pady=(0, 10), sticky="ew")
-        url_row.grid_columnconfigure(0, weight=1)
+        ctk.CTkLabel(inner, text="App_Downloader", font=("Segoe UI", 14, "bold"), text_color=TEXT).pack(side="left", padx=(10, 0))
+
+        nav = ctk.CTkFrame(inner, fg_color="transparent")
+        nav.pack(side="left", padx=(32, 0))
+        for text in ["File", "Tools", "Help"]:
+            ctk.CTkButton(nav, text=text, fg_color=SURFACE, text_color=MUTED,
+                hover_color=SURFACE_HOVER, font=("Segoe UI", 12), width=50, height=28,
+                corner_radius=6, command=lambda t=text: self._on_menu(t)).pack(side="left", padx=2)
+
+        right = ctk.CTkFrame(inner, fg_color="transparent")
+        right.pack(side="right")
+        ctk.CTkLabel(right, text="v" + VERSION, font=("Segoe UI", 11), text_color=MUTED).pack(side="left", padx=(0, 12))
+        ctk.CTkButton(right, text="Classic Mode", fg_color=SURFACE, text_color=MUTED,
+            hover_color=SURFACE_HOVER, font=("Segoe UI", 12), height=28, corner_radius=6,
+            command=self.app.switch_ui_mode).pack(side="left")
+
+    def _on_menu(self, item):
+        if item == "Tools":
+            self.app.open_settings()
+        elif item == "Help":
+            self.app.open_about()
+        elif item == "File":
+            self.app.open_downloads_folder()
+
+    def build_workspace(self, parent):
+        card = ctk.CTkFrame(parent, fg_color=SURFACE, corner_radius=CARD_RADIUS)
+        card.grid(row=0, column=0, padx=24, pady=(24, 0), sticky="ew")
+        card.grid_columnconfigure(0, weight=1)
+
+        inner = ctk.CTkFrame(card, fg_color="transparent")
+        inner.grid(row=0, column=0, padx=24, pady=20, sticky="ew")
+        inner.grid_columnconfigure(0, weight=1)
+
+        url_frame = ctk.CTkFrame(inner, fg_color="transparent")
+        url_frame.grid(row=0, column=0, sticky="ew", pady=(0, 14))
+        url_frame.grid_columnconfigure(0, weight=1)
 
         self.url_entry = ctk.CTkEntry(
-            url_row,
-            placeholder_text="Paste video URL here...",
-            height=46,
-            corner_radius=10,
+            url_frame,
+            placeholder_text="Paste video or playlist URL here...",
+            height=48,
+            corner_radius=INPUT_RADIUS,
             font=("Segoe UI", 14),
             border_width=1,
-            border_color="#1e2448",
-            fg_color="#0b0e1a",
-            text_color="#f1f5f9",
-            placeholder_text_color="#3b4270"
+            border_color=BORDER,
+            fg_color=BG,
+            text_color=TEXT,
+            placeholder_text_color=MUTED
         )
-        self.url_entry.grid(row=0, column=0, sticky="ew", padx=(0, 8))
+        self.url_entry.grid(row=0, column=0, sticky="ew")
+        self.url_entry.bind("<KeyRelease>", self._on_url_change)
+        self.url_entry.bind("<<Paste>>", self._on_url_change)
 
-        self.paste_btn = ctk.CTkButton(
-            url_row,
-            text="Paste",
-            height=46,
-            width=80,
-            corner_radius=10,
-            fg_color="#1c2140",
-            hover_color="#252b50",
-            font=("Segoe UI", 13, "bold"),
-            command=self.paste_url
-        )
-        self.paste_btn.grid(row=0, column=1, padx=(0, 8))
+        self.platform_badge = ctk.CTkFrame(url_frame, width=32, height=32, corner_radius=8, fg_color="transparent")
+        self.platform_label = ctk.CTkLabel(self.platform_badge, text="", font=("Segoe UI", 11, "bold"), text_color=TEXT)
 
-        self.detect_btn = ctk.CTkButton(
-            url_row,
-            text="Detect Platform",
-            height=46,
-            width=130,
-            corner_radius=10,
-            fg_color="#8b5cf6",
-            hover_color="#7c3aed",
-            font=("Segoe UI", 13, "bold"),
-            command=self.app.detect_platform
-        )
-        self.detect_btn.grid(row=0, column=2)
+        config_row = ctk.CTkFrame(inner, fg_color="transparent")
+        config_row.grid(row=1, column=0, sticky="ew", pady=(0, 14))
+        config_row.grid_columnconfigure(3, weight=1)
 
-        platform_section = ctk.CTkFrame(content, corner_radius=16, fg_color=MODERN_THEME["card"])
-        platform_section.grid(row=2, column=0, padx=24, pady=12, sticky="ew")
-        platform_section.grid_columnconfigure(0, weight=1)
-
-        platform_header = ctk.CTkFrame(platform_section, fg_color="transparent")
-        platform_header.pack(fill="x", padx=20, pady=(14, 6))
-
-        ctk.CTkLabel(
-            platform_header,
-            text="Platforms",
-            font=("Segoe UI", 15, "bold"),
-            text_color="#f1f5f9"
-        ).pack(side="left")
-
-        grid_wrapper = ctk.CTkFrame(platform_section, fg_color="transparent")
-        grid_wrapper.pack(fill="x", padx=14, pady=(4, 16))
-
-        columns = 4
-        for index, platform in enumerate(PLATFORMS):
-            row = index // columns
-            col = index % columns
-
-            card = PlatformCard(
-                grid_wrapper,
-                platform,
-                self.select_platform,
-                self.show_platform_info
-            )
-            card.grid(row=row, column=col, padx=5, pady=5, sticky="nsew")
-            self.cards[platform["key"]] = card
-
-        for col in range(columns):
-            grid_wrapper.grid_columnconfigure(col, weight=1, minsize=180)
-
-        options_section = ctk.CTkFrame(content, corner_radius=16, fg_color=MODERN_THEME["card"])
-        options_section.grid(row=3, column=0, padx=24, pady=10, sticky="ew")
-        options_section.grid_columnconfigure(2, weight=1)
-
-        quality_frame = ctk.CTkFrame(options_section, fg_color="transparent")
-        quality_frame.grid(row=0, column=0, padx=(20, 8), pady=16)
-
-        ctk.CTkLabel(
-            quality_frame,
-            text="Quality",
-            font=("Segoe UI", 11, "bold"),
-            text_color="#64748b"
-        ).pack(anchor="w", pady=(0, 4))
-
+        qf = self._config_field(config_row, 0, "Quality")
         self.quality_btn = ctk.CTkButton(
-            quality_frame,
-            text="Best",
-            height=36,
-            width=130,
-            corner_radius=8,
-            fg_color="#1c2140",
-            hover_color="#252b50",
-            font=("Segoe UI", 13),
-            text_color="#f1f5f9",
+            qf, text="Best", height=38, width=130, corner_radius=8,
+            fg_color=BG, hover_color=SURFACE_HOVER, font=("Segoe UI", 13),
+            text_color=TEXT, border_width=1, border_color=BORDER,
             command=self.open_quality_selector
         )
-        self.quality_btn.pack()
+        self.quality_btn.pack(fill="x")
 
-        filetype_frame = ctk.CTkFrame(options_section, fg_color="transparent")
-        filetype_frame.grid(row=0, column=1, padx=8, pady=16)
-
-        ctk.CTkLabel(
-            filetype_frame,
-            text="File Type",
-            font=("Segoe UI", 11, "bold"),
-            text_color="#64748b"
-        ).pack(anchor="w", pady=(0, 4))
-
+        ff = self._config_field(config_row, 1, "Format")
         self.filetype_menu = ctk.CTkOptionMenu(
-            filetype_frame,
-            values=["Video", "Audio"],
-            width=110,
-            height=36,
-            corner_radius=8,
-            fg_color="#1c2140",
-            button_color="#8b5cf6",
-            button_hover_color="#7c3aed",
-            dropdown_fg_color="#13172b",
-            dropdown_hover_color="#1c2140",
-            text_color="#f1f5f9",
-            dropdown_text_color="#f1f5f9",
-            font=("Segoe UI", 13),
-            dropdown_font=("Segoe UI", 13)
+            ff,
+            values=["MP4 Video", "Audio"],
+            width=130, height=38, corner_radius=8,
+            fg_color=BG, button_color=PRIMARY, button_hover_color=PRIMARY_HOVER,
+            dropdown_fg_color=SURFACE, dropdown_hover_color=SURFACE_HOVER,
+            text_color=TEXT, dropdown_text_color=TEXT,
+            font=("Segoe UI", 13), dropdown_font=("Segoe UI", 13)
         )
-        self.filetype_menu.pack()
-        self.filetype_menu.set("Video")
+        self.filetype_menu.pack(fill="x")
+        self.filetype_menu.set("MP4 Video")
 
-        filename_frame = ctk.CTkFrame(options_section, fg_color="transparent")
-        filename_frame.grid(row=0, column=2, padx=8, pady=16)
-
-        ctk.CTkLabel(
-            filename_frame,
-            text="Filename Mode",
-            font=("Segoe UI", 11, "bold"),
-            text_color="#64748b"
-        ).pack(anchor="w", pady=(0, 4))
-
+        nf = self._config_field(config_row, 2, "Filename")
         self.filename_menu = ctk.CTkOptionMenu(
-            filename_frame,
+            nf,
             values=["Original", "Mixed", "Hash"],
-            width=120,
-            height=36,
-            corner_radius=8,
-            fg_color="#1c2140",
-            button_color="#8b5cf6",
-            button_hover_color="#7c3aed",
-            dropdown_fg_color="#13172b",
-            dropdown_hover_color="#1c2140",
-            text_color="#f1f5f9",
-            dropdown_text_color="#f1f5f9",
-            font=("Segoe UI", 13),
-            dropdown_font=("Segoe UI", 13)
+            width=110, height=38, corner_radius=8,
+            fg_color=BG, button_color=PRIMARY, button_hover_color=PRIMARY_HOVER,
+            dropdown_fg_color=SURFACE, dropdown_hover_color=SURFACE_HOVER,
+            text_color=TEXT, dropdown_text_color=TEXT,
+            font=("Segoe UI", 13), dropdown_font=("Segoe UI", 13)
         )
-        self.filename_menu.pack()
+        self.filename_menu.pack(fill="x")
         self.filename_menu.set("Original")
 
-        save_frame = ctk.CTkFrame(options_section, fg_color="transparent")
-        save_frame.grid(row=0, column=3, padx=8, pady=16, sticky="ew")
-
-        ctk.CTkLabel(
-            save_frame,
-            text="Save To",
-            font=("Segoe UI", 11, "bold"),
-            text_color="#64748b"
-        ).pack(anchor="w", pady=(0, 4))
-
+        sf = self._config_field(config_row, 3, "Save To")
+        save_inner = ctk.CTkFrame(sf, fg_color="transparent")
+        save_inner.pack(fill="x")
+        save_inner.grid_columnconfigure(0, weight=1)
         self.save_entry = ctk.CTkEntry(
-            save_frame,
-            width=160,
-            height=36,
-            corner_radius=8,
-            fg_color="#0b0e1a",
-            border_width=1,
-            border_color="#1e2448",
-            text_color="#f1f5f9",
-            font=("Segoe UI", 12)
+            save_inner, height=38, corner_radius=8,
+            fg_color=BG, border_width=1, border_color=BORDER,
+            text_color=TEXT, font=("Segoe UI", 12)
         )
-        self.save_entry.pack(fill="x")
+        self.save_entry.grid(row=0, column=0, sticky="ew")
         self.save_entry.insert(0, self.app.config_manager.get("download_dir"))
 
-        action_section = ctk.CTkFrame(content, corner_radius=16, fg_color=MODERN_THEME["card"])
-        action_section.grid(row=4, column=0, padx=24, pady=10, sticky="ew")
-
-        action_inner = ctk.CTkFrame(action_section, fg_color="transparent")
-        action_inner.pack(fill="x", padx=20, pady=14)
+        btn_frame = ctk.CTkFrame(inner, fg_color="transparent")
+        btn_frame.grid(row=2, column=0, sticky="ew", pady=(0, 10))
+        btn_frame.grid_columnconfigure(0, weight=1)
 
         self.download_btn = ctk.CTkButton(
-            action_inner,
-            text="⬇ Download",
-            height=44,
-            width=150,
-            corner_radius=10,
-            fg_color="#8b5cf6",
-            hover_color="#7c3aed",
+            btn_frame,
+            text="Start Download",
+            height=46,
+            corner_radius=BTN_RADIUS,
+            fg_color=PRIMARY,
+            hover_color=PRIMARY_HOVER,
             font=("Segoe UI", 15, "bold"),
-            command=self.app.start_download
+            command=self._on_download_click
         )
-        self.download_btn.pack(side="left", padx=(0, 10))
+        self.download_btn.grid(row=0, column=0, sticky="ew")
 
-        self.stop_btn = ctk.CTkButton(
-            action_inner,
-            text="■ Stop",
-            height=44,
-            width=100,
-            corner_radius=10,
-            fg_color="#dc2626",
-            hover_color="#b91c1c",
-            font=("Segoe UI", 14, "bold"),
-            command=self.app.cancel_download
+        link_frame = ctk.CTkFrame(inner, fg_color="transparent")
+        link_frame.grid(row=3, column=0, sticky="w")
+
+        self.platforms_link = ctk.CTkButton(
+            link_frame,
+            text="+ View Supported Platforms (24)",
+            fg_color=BG,
+            text_color=PRIMARY,
+            hover_color=SURFACE_HOVER,
+            font=("Segoe UI", 12, "bold"),
+            command=self._show_platforms,
+            cursor="hand2",
+            width=240,
+            height=32,
+            corner_radius=8
         )
-        self.stop_btn.pack(side="left", padx=10)
+        self.platforms_link.pack(side="left")
 
-        progress_section = ctk.CTkFrame(content, corner_radius=16, fg_color=MODERN_THEME["card"])
-        progress_section.grid(row=5, column=0, padx=24, pady=10, sticky="ew")
-        progress_section.grid_columnconfigure(0, weight=1)
-
-        progress_inner = ctk.CTkFrame(progress_section, fg_color="transparent")
-        progress_inner.pack(fill="x", padx=20, pady=16)
-
-        self.progress = ctk.CTkProgressBar(
-            progress_inner,
-            height=8,
-            corner_radius=4,
-            fg_color="#1e2448",
-            progress_color="#8b5cf6"
-        )
-        self.progress.pack(fill="x")
-        self.progress.set(0)
-
-        progress_stats = ctk.CTkFrame(progress_inner, fg_color="transparent")
-        progress_stats.pack(fill="x", pady=(8, 0))
+        status_row = ctk.CTkFrame(inner, fg_color="transparent")
+        status_row.grid(row=4, column=0, sticky="ew", pady=(8, 0))
 
         self.status_label = ctk.CTkLabel(
-            progress_stats,
+            status_row,
             text="Ready",
             font=("Segoe UI", 12),
-            text_color="#64748b"
+            text_color=MUTED
         )
         self.status_label.pack(side="left")
 
         self.progress_pct = ctk.CTkLabel(
-            progress_stats,
+            status_row,
             text="",
             font=("Segoe UI", 12, "bold"),
-            text_color="#8b5cf6"
+            text_color=PRIMARY
         )
         self.progress_pct.pack(side="right")
 
-        bottom_bar = ctk.CTkFrame(content, corner_radius=16, fg_color=MODERN_THEME["card"])
-        bottom_bar.grid(row=6, column=0, padx=24, pady=(10, 24), sticky="ew")
-
-        bar_inner = ctk.CTkFrame(bottom_bar, fg_color="transparent")
-        bar_inner.pack(fill="x", padx=20, pady=12)
-
-        self.open_btn = ctk.CTkButton(
-            bar_inner,
-            text="📁 Open Folder",
-            height=36,
-            width=120,
-            corner_radius=8,
-            fg_color="#1c2140",
-            hover_color="#252b50",
-            font=("Segoe UI", 13),
-            command=self.app.open_downloads_folder
+        self.progress = ctk.CTkProgressBar(
+            status_row,
+            height=6,
+            corner_radius=3,
+            fg_color=BORDER,
+            progress_color=PRIMARY
         )
-        self.open_btn.pack(side="left", padx=(0, 8))
+        self.progress.pack(fill="x", pady=(6, 0))
+        self.progress.set(0)
 
-        self.clear_btn = ctk.CTkButton(
-            bar_inner,
-            text="🗑 Clear History",
-            height=36,
-            width=120,
-            corner_radius=8,
-            fg_color="#1c2140",
-            hover_color="#252b50",
-            font=("Segoe UI", 13),
-            text_color="#ef4444",
-            command=self.app.clear_history
-        )
-        self.clear_btn.pack(side="left", padx=8)
+    def _config_field(self, parent, col, label):
+        f = ctk.CTkFrame(parent, fg_color="transparent")
+        f.grid(row=0, column=col, padx=(0, 12), sticky="nsew")
+        ctk.CTkLabel(f, text=label, font=("Segoe UI", 11, "bold"), text_color=MUTED, anchor="w").pack(anchor="w", pady=(0, 4))
+        return f
 
-        bottom_status = ctk.CTkFrame(bar_inner, fg_color="transparent")
-        bottom_status.pack(side="right")
+    def _on_url_change(self, event=None):
+        url = self.url_entry.get().strip()
+        if url:
+            platform = detect_platform(url, PLATFORMS)
+            self.detected_platform = platform
+            if platform:
+                self.selected_platform = platform
+                short = PLATFORM_SHORT.get(platform["key"], platform["name"][:2].upper())
+                self.platform_badge.configure(fg_color=platform["color"])
+                self.platform_badge.place(in_=self.url_entry, relx=1.0, rely=0.5, x=-40, anchor="e")
+                self.platform_label.configure(text=short, text_color="#ffffff")
+                self.platform_label.place(in_=self.platform_badge, relx=0.5, rely=0.5, anchor="center")
+            else:
+                self.selected_platform = None
+                self.detected_platform = None
+                self.platform_badge.place_forget()
+                self.platform_label.place_forget()
+        else:
+            self.selected_platform = None
+            self.detected_platform = None
+            self.platform_badge.place_forget()
+            self.platform_label.place_forget()
 
-        status_indicator = ctk.CTkFrame(
-            bottom_status,
-            width=8,
-            height=8,
-            corner_radius=4,
-            fg_color="#22c55e"
-        )
-        status_indicator.pack(side="left")
+    def _on_download_click(self):
+        if self.is_downloading:
+            self.app.cancel_download()
+        else:
+            self.app.start_download()
 
-        ctk.CTkLabel(
-            bottom_status,
-            text="Ready",
-            font=("Segoe UI", 12),
-            text_color="#64748b"
-        ).pack(side="left", padx=(6, 0))
+    def _show_platforms(self):
+        modal = ctk.CTkToplevel(self)
+        modal.title("Supported Platforms")
+        modal.geometry("600x500")
+        modal.transient(self)
+        modal.grab_set()
+        modal.configure(fg_color=BG)
 
-        history_section = ctk.CTkFrame(content, corner_radius=16, fg_color=MODERN_THEME["card"])
-        history_section.grid(row=7, column=0, padx=24, pady=(0, 24), sticky="nsew")
-        history_section.grid_columnconfigure(0, weight=1)
-        history_section.grid_rowconfigure(1, weight=1)
+        ctk.CTkLabel(modal, text="Supported Platforms (24)",
+            font=("Segoe UI", 18, "bold"), text_color=TEXT).pack(pady=(20, 12))
 
-        history_header = ctk.CTkFrame(history_section, fg_color="transparent")
-        history_header.grid(row=0, column=0, padx=20, pady=(14, 6), sticky="ew")
+        scroll = ctk.CTkScrollableFrame(modal, corner_radius=CARD_RADIUS, fg_color="transparent")
+        scroll.pack(fill="both", expand=True, padx=20, pady=(0, 16))
 
-        ctk.CTkLabel(
-            history_header,
-            text="Download History",
-            font=("Segoe UI", 15, "bold"),
-            text_color="#f1f5f9"
-        ).pack(side="left")
+        for platform in PLATFORMS:
+            row = ctk.CTkFrame(scroll, fg_color=SURFACE, corner_radius=8)
+            row.pack(fill="x", pady=3)
+
+            badge = ctk.CTkFrame(row, width=36, height=36, corner_radius=8, fg_color=platform["color"])
+            badge.pack(side="left", padx=10, pady=8)
+            badge.pack_propagate(False)
+            ctk.CTkLabel(badge, text=platform["name"][0].upper(),
+                font=("Segoe UI", 14, "bold"), text_color="#fff").pack(expand=True)
+
+            ctk.CTkLabel(row, text=platform["name"],
+                font=("Segoe UI", 13, "bold"), text_color=TEXT).pack(side="left", padx=(8, 0))
+
+            status = "Supported" if platform["supported"] else "Coming Soon"
+            sc = SUCCESS if platform["supported"] else "#f59e0b"
+            ctk.CTkLabel(row, text=status, font=("Segoe UI", 11), text_color=sc).pack(side="right", padx=14)
+
+            ctk.CTkLabel(row, text=", ".join(platform["domains"]),
+                font=("Segoe UI", 10), text_color=MUTED).pack(side="right", padx=14)
+
+        ctk.CTkButton(modal, text="Close", height=38, corner_radius=BTN_RADIUS,
+            fg_color=MUTED, hover_color="#4b5563",
+            command=modal.destroy).pack(pady=(0, 16))
+
+    def build_queue_section(self, parent):
+        self.queue_frame = ctk.CTkFrame(parent, fg_color=SURFACE, corner_radius=CARD_RADIUS)
+        self.queue_frame.grid(row=1, column=0, padx=24, pady=(16, 24), sticky="ew")
+        self.queue_frame.grid_columnconfigure(0, weight=1)
+
+        header = ctk.CTkFrame(self.queue_frame, fg_color="transparent")
+        header.grid(row=0, column=0, padx=20, pady=(14, 8), sticky="ew")
+        ctk.CTkLabel(header, text="Download History",
+            font=("Segoe UI", 15, "bold"), text_color=TEXT).pack(side="left")
+
+        bottom_actions = ctk.CTkFrame(header, fg_color="transparent")
+        bottom_actions.pack(side="right")
+        ctk.CTkButton(bottom_actions, text="Open Folder", height=32, corner_radius=8,
+            fg_color=SURFACE, text_color=MUTED, hover_color=SURFACE_HOVER,
+            font=("Segoe UI", 12), command=self.app.open_downloads_folder).pack(side="left", padx=2)
+        ctk.CTkButton(bottom_actions, text="Clear History", height=32, corner_radius=8,
+            fg_color=SURFACE, text_color=DANGER, hover_color=SURFACE_HOVER,
+            font=("Segoe UI", 12), command=self.app.clear_history).pack(side="left", padx=2)
 
         self.history_table = ctk.CTkScrollableFrame(
-            history_section,
+            self.queue_frame,
             corner_radius=10,
-            fg_color="#0b0e1a",
-            height=140
+            fg_color=BG,
+            height=180
         )
         self.history_table.grid(row=1, column=0, padx=20, pady=(4, 16), sticky="nsew")
 
@@ -630,6 +368,7 @@ class ModernView(ctk.CTkFrame):
             if text:
                 self.url_entry.delete(0, "end")
                 self.url_entry.insert(0, text)
+                self._on_url_change()
         except Exception:
             pass
 
@@ -639,7 +378,6 @@ class ModernView(ctk.CTkFrame):
                       "720p": "720p (HD)", "480p": "480p (SD)", "mp3": "Audio (MP3)"}
             self.quality_btn.configure(text=labels.get(value, value))
             self._selected_quality = value
-
         QualitySelectorModal(self, on_select)
 
     def get_quality(self):
@@ -651,19 +389,18 @@ class ModernView(ctk.CTkFrame):
 
     def select_platform(self, platform):
         self.selected_platform = platform
-        for key, card in self.cards.items():
-            card.set_selected(key == platform["key"])
-        self.update_status(f"Selected: {platform['name']}", "#a78bfa")
+        self.detected_platform = platform
 
     def show_platform_info(self, platform):
         PlatformInfoModal(self, platform)
 
-    def update_status(self, text, color="#64748b"):
+    def update_status(self, text, color=MUTED):
         self.status_label.configure(text=text, text_color=color)
-        if "%" in text:
-            self.progress_pct.configure(text=text.split("...")[-1].strip() if "..." in text else "")
-        elif "Completed" in text:
-            self.progress_pct.configure(text="100%", text_color="#22c55e")
+        if "Completed" in text:
+            self.progress_pct.configure(text="100%", text_color=SUCCESS)
+        elif "%" in text and "..." in text:
+            pct = text.split("...")[0].split()[-1] if "..." in text else ""
+            self.progress_pct.configure(text=pct, text_color=PRIMARY)
         else:
             self.progress_pct.configure(text="")
 
@@ -677,7 +414,7 @@ class ModernView(ctk.CTkFrame):
         if not rows:
             ctk.CTkLabel(
                 self.history_table,
-                text="No downloads yet",
+                text="No downloads yet — paste a URL above to get started",
                 font=("Segoe UI", 12),
                 text_color="#475569"
             ).pack(pady=20)
@@ -686,12 +423,7 @@ class ModernView(ctk.CTkFrame):
         columns = ("Platform", "Title", "Quality", "Status", "Date")
         col_widths = [90, 0, 60, 70, 130]
 
-        header_frame = ctk.CTkFrame(
-            self.history_table,
-            fg_color="#090c17",
-            corner_radius=0,
-            height=30
-        )
+        header_frame = ctk.CTkFrame(self.history_table, fg_color="#090c17", corner_radius=0, height=28)
         header_frame.pack(fill="x")
         header_frame.pack_propagate(False)
 
@@ -704,22 +436,12 @@ class ModernView(ctk.CTkFrame):
             if col_widths[idx] > 0:
                 f.configure(width=col_widths[idx])
                 f.pack_propagate(False)
-            ctk.CTkLabel(
-                f,
-                text=col_name,
-                font=("Segoe UI", 10, "bold"),
-                text_color="#475569",
-                anchor="w"
-            ).pack(side="left")
+            ctk.CTkLabel(f, text=col_name, font=("Segoe UI", 10, "bold"),
+                text_color="#475569", anchor="w").pack(side="left")
 
         for row_idx, row in enumerate(rows):
-            bg = "#0b0e1a" if row_idx % 2 == 0 else "#13172b"
-            row_frame = ctk.CTkFrame(
-                self.history_table,
-                corner_radius=4,
-                fg_color=bg,
-                height=28
-            )
+            bg = BG if row_idx % 2 == 0 else "#0f1729"
+            row_frame = ctk.CTkFrame(self.history_table, corner_radius=4, fg_color=bg, height=26)
             row_frame.pack(fill="x", pady=1)
             row_frame.pack_propagate(False)
 
@@ -741,14 +463,24 @@ class ModernView(ctk.CTkFrame):
                     f.configure(width=col_widths[idx])
                     f.pack_propagate(False)
 
-                color = "#f1f5f9"
+                color = TEXT
                 if idx == 3:
-                    color = "#22c55e" if val == "completed" else "#ef4444"
+                    color = SUCCESS if val == "completed" else DANGER
 
-                ctk.CTkLabel(
-                    f,
-                    text=val,
-                    font=("Segoe UI", 11),
-                    text_color=color,
-                    anchor="w"
-                ).pack(side="left")
+                ctk.CTkLabel(f, text=val, font=("Segoe UI", 11),
+                    text_color=color, anchor="w").pack(side="left")
+
+    def set_downloading_state(self, active):
+        self.is_downloading = active
+        if active:
+            self.download_btn.configure(
+                text="Cancel",
+                fg_color=DANGER,
+                hover_color=DANGER_HOVER
+            )
+        else:
+            self.download_btn.configure(
+                text="Start Download",
+                fg_color=PRIMARY,
+                hover_color=PRIMARY_HOVER
+            )
