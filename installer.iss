@@ -15,6 +15,7 @@ UninstallDisplayIcon={app}\App_Downloader.exe
 
 [Files]
 Source: "dist\App_Downloader.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "bin\ffmpeg.exe"; DestDir: "{app}\bin"; Flags: ignoreversion
 
 
 [Icons]

@@ -63,12 +63,26 @@ class Downloader:
 
     @staticmethod
     def _get_ffmpeg_path():
-        """Locate ffmpeg: check PATH first, then app data directory."""
+        """Locate ffmpeg: check PATH first, then bundled with app, then app data directory."""
         try:
             subprocess.run(["ffmpeg", "-version"], capture_output=True, check=True)
             return "ffmpeg"
         except Exception:
             pass
+        search_dirs = []
+        if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+            search_dirs.append(sys._MEIPASS)
+        search_dirs.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+        search_dirs.append(os.path.dirname(sys.executable))
+        seen = set()
+        for base in search_dirs:
+            resolved = os.path.realpath(base)
+            if resolved in seen:
+                continue
+            seen.add(resolved)
+            bundled_path = os.path.join(base, "bin", "ffmpeg.exe")
+            if os.path.exists(bundled_path):
+                return bundled_path
         ffmpeg_dir = os.path.join(os.environ.get("LOCALAPPDATA", os.path.expanduser("~")), "App_Downloader", "bin")
         ffmpeg_path = os.path.join(ffmpeg_dir, "ffmpeg.exe")
         if os.path.exists(ffmpeg_path):
@@ -83,10 +97,11 @@ class Downloader:
         ffmpeg_dir = os.path.join(os.environ.get("LOCALAPPDATA", os.path.expanduser("~")), "App_Downloader", "bin")
         os.makedirs(ffmpeg_dir, exist_ok=True)
         ffmpeg_path = os.path.join(ffmpeg_dir, "ffmpeg.exe")
-        url = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip"
+        url = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
         zip_path = ffmpeg_path + ".zip"
+        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"}
         try:
-            resp = requests.get(url, timeout=30, stream=True)
+            resp = requests.get(url, headers=headers, timeout=120, stream=True)
             resp.raise_for_status()
             with open(zip_path, "wb") as f:
                 for chunk in resp.iter_content(8192):
@@ -161,7 +176,15 @@ class Downloader:
                     continue
                 has_extractor = _has_extractor_for(url)
                 detail = str(e).strip() or "No additional details"
-                if has_extractor:
+                if "ffmpeg" in detail.lower():
+                    error_msg = (
+                        f"FFmpeg is required for this download.\n\n"
+                        f"Details: {detail}\n\n"
+                        "This app uses ffmpeg to merge video and audio streams.\n"
+                        "Make sure ffmpeg is installed on your system or bundled correctly.\n"
+                        "You can download it from: https://ffmpeg.org/download.html"
+                    )
+                elif has_extractor:
                     error_msg = (
                         f"Unable to download from this URL.\n\n"
                         f"Details: {detail}\n\n"

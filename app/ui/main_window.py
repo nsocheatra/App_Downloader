@@ -378,7 +378,10 @@ class AppDownloader(ctk.CTk):
             else:
                 logger.error(f"Download error: {e}", exc_info=True)
                 self.update_status(f"Error: {err_msg[:60]}", "#f87171")
-                ErrorModal(self, "Download Failed", err_msg, "Check the URL or try another supported platform.")
+                suggestion = None
+                if "ffmpeg" not in err_msg.lower():
+                    suggestion = "Check the URL or try another supported platform."
+                ErrorModal(self, "Download Failed", err_msg, suggestion)
             self.current_view.set_progress(0)
 
     def update_status(self, text, color="#8899aa"):

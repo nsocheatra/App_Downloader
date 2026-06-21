@@ -18,6 +18,11 @@ def build():
     if os.path.exists(spec_path):
         os.remove(spec_path)
 
+    ffmpeg_src = os.path.join(project_root, "bin", "ffmpeg.exe")
+    if not os.path.exists(ffmpeg_src):
+        print("Warning: bin/ffmpeg.exe not found — ffmpeg will not be bundled.")
+        print("Downloads requiring video+audio merging will use auto-download fallback.")
+
     cmd = [
         sys.executable, "-m", "PyInstaller",
         "--onefile",
@@ -25,9 +30,10 @@ def build():
         "--name", "App_Downloader",
         "--icon", icon_path,
         "--add-data", f"{icon_path};app/assets/icons",
-        "--noconfirm",
-        os.path.join(project_root, "main.py"),
     ]
+    if os.path.exists(ffmpeg_src):
+        cmd.extend(["--add-data", f"{ffmpeg_src};bin"])
+    cmd.extend(["--noconfirm", os.path.join(project_root, "main.py")])
 
     print("Building App_Downloader executable...")
     result = subprocess.run(cmd, cwd=project_root)
