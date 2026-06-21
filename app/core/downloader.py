@@ -97,7 +97,15 @@ class Downloader:
     def _ensure_ffmpeg():
         path = Downloader._get_ffmpeg_path()
         if path:
-            return path
+            try:
+                subprocess.run([path, "-version"], capture_output=True, check=True, timeout=10)
+                return path
+            except Exception:
+                if path != "ffmpeg" and os.path.exists(path):
+                    try:
+                        os.remove(path)
+                    except Exception:
+                        pass
         ffmpeg_dir = os.path.join(os.environ.get("LOCALAPPDATA", os.path.expanduser("~")), "App_Downloader", "bin")
         os.makedirs(ffmpeg_dir, exist_ok=True)
         ffmpeg_path = os.path.join(ffmpeg_dir, "ffmpeg.exe")
