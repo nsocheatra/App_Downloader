@@ -40,7 +40,8 @@ class UpdateChecker:
 
     def _check_via_api(self):
         url = f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/releases/latest"
-        resp = requests.get(url, timeout=10)
+        headers = {"User-Agent": f"{APP_NAME}/{VERSION}"}
+        resp = requests.get(url, timeout=10, headers=headers)
         if resp.status_code != 200:
             raise Exception(f"API returned {resp.status_code}")
 
@@ -59,7 +60,8 @@ class UpdateChecker:
 
     def _check_via_raw(self):
         url = f"https://raw.githubusercontent.com/{REPO_OWNER}/{REPO_NAME}/main/app/version.py"
-        resp = requests.get(url, timeout=10)
+        headers = {"User-Agent": f"{APP_NAME}/{VERSION}"}
+        resp = requests.get(url, timeout=10, headers=headers)
         if resp.status_code != 200:
             raise Exception(f"Raw fetch returned {resp.status_code}")
 

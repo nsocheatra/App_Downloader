@@ -411,8 +411,12 @@ class AppDownloader(ctk.CTk):
             checker.check()
 
     def _on_update_result(self, checker):
-        if checker.has_update:
+        if checker.check_error:
+            self.update_status("Update check failed", "#f87171")
+        elif checker.has_update:
             self.after(0, lambda: self._show_update_notification(checker))
+        else:
+            self.update_status(f"Version {VERSION} (up to date)", "#4ade80")
 
     def _show_update_notification(self, checker):
         self.update_status(f"Update v{checker.latest_version} available", "#22c55e")

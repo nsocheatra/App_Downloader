@@ -126,6 +126,7 @@ class ModernView(ctk.CTkFrame):
         url_frame = ctk.CTkFrame(inner, fg_color="transparent")
         url_frame.grid(row=0, column=0, sticky="ew", pady=(0, 14))
         url_frame.grid_columnconfigure(0, weight=1)
+        url_frame.grid_columnconfigure(1, weight=0)
 
         self.url_entry = ctk.CTkEntry(
             url_frame,
@@ -139,9 +140,22 @@ class ModernView(ctk.CTkFrame):
             text_color=TEXT,
             placeholder_text_color=MUTED
         )
-        self.url_entry.grid(row=0, column=0, sticky="ew")
+        self.url_entry.grid(row=0, column=0, sticky="ew", padx=(0, 8))
         self.url_entry.bind("<KeyRelease>", self._on_url_change)
         self.url_entry.bind("<<Paste>>", self._on_url_change)
+
+        self.paste_btn = ctk.CTkButton(
+            url_frame,
+            text="Paste",
+            width=80,
+            height=48,
+            corner_radius=INPUT_RADIUS,
+            fg_color=PRIMARY,
+            hover_color=PRIMARY_HOVER,
+            font=("Segoe UI", 13, "bold"),
+            command=self._on_paste_click
+        )
+        self.paste_btn.grid(row=0, column=1)
 
         self.platform_badge = ctk.CTkFrame(url_frame, width=32, height=32, corner_radius=8, fg_color="transparent")
         self.platform_label = ctk.CTkLabel(self.platform_badge, text="", font=("Segoe UI", 11, "bold"), text_color=TEXT)
@@ -265,6 +279,15 @@ class ModernView(ctk.CTkFrame):
         f.grid(row=0, column=col, padx=(0, 12), sticky="nsew")
         ctk.CTkLabel(f, text=label, font=("Segoe UI", 11, "bold"), text_color=MUTED, anchor="w").pack(anchor="w", pady=(0, 4))
         return f
+
+    def _on_paste_click(self):
+        try:
+            text = self.winfo_toplevel().clipboard_get()
+            self.url_entry.delete(0, "end")
+            self.url_entry.insert(0, text)
+            self._on_url_change()
+        except Exception:
+            pass
 
     def _on_url_change(self, event=None):
         url = self.url_entry.get().strip()
