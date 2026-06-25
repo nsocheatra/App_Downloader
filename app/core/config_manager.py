@@ -15,6 +15,8 @@ DEFAULT_CONFIG = {
     "save_history": True,
     "auto_detect_platform": True,
     "check_updates_on_startup": True,
+    "cookies_file": "",
+    "cookies_from_browser": "",
 }
 
 

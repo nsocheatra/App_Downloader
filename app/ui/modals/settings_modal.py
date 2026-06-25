@@ -1,4 +1,10 @@
 import customtkinter as ctk
+import tkinter.filedialog as filedialog
+
+
+BROWSER_DISPLAY = ["None", "Chrome", "Firefox", "Edge", "Brave", "Opera", "Vivaldi"]
+BROWSER_VALUE = {"None": "", "Chrome": "chrome", "Firefox": "firefox", "Edge": "edge", "Brave": "brave", "Opera": "opera", "Vivaldi": "vivaldi"}
+DISPLAY_BROWSER = {v: k for k, v in BROWSER_VALUE.items()}
 
 
 class SettingsModal(ctk.CTkToplevel):
@@ -36,7 +42,6 @@ class SettingsModal(ctk.CTkToplevel):
         categories = [
             ("General", [
                 ("Theme", ["Dark", "Light", "System"], self.config_data.get("theme", "dark").capitalize(), "theme"),
-                ("UI Mode", ["Classic", "Modern"], self.config_data.get("ui_mode", "modern").capitalize(), "ui_mode"),
                 ("Auto Detect Platform", None, None, "auto_detect_platform"),
                 ("Check for Updates on Startup", None, None, "check_updates_on_startup"),
                 ("Show Completion Dialog", None, None, "show_completion_dialog"),
@@ -51,6 +56,10 @@ class SettingsModal(ctk.CTkToplevel):
             ("Advanced", [
                 ("Max Threads", ["1", "2", "3", "4", "5"], str(self.config_data.get("max_threads", 2)), "max_threads"),
                 ("Save History", None, None, "save_history"),
+            ]),
+            ("Authentication", [
+                ("Cookies File", None, None, "cookies_file"),
+                ("Cookies From Browser", BROWSER_DISPLAY, self._get_browser_display(), "cookies_from_browser"),
             ]),
         ]
 
@@ -121,6 +130,34 @@ class SettingsModal(ctk.CTkToplevel):
                     entry.insert(0, self.config_data.get("download_dir"))
                     self.entries[key] = entry
 
+                elif key == "cookies_file":
+                    frame = ctk.CTkFrame(row, fg_color="transparent")
+                    frame.pack(side="right")
+                    entry = ctk.CTkEntry(
+                        frame,
+                        width=130,
+                        height=34,
+                        corner_radius=8,
+                        fg_color="#2a3a55",
+                        border_width=1,
+                        border_color="#2a3a55",
+                        text_color="#e0e0e0"
+                    )
+                    entry.pack(side="left")
+                    entry.insert(0, self.config_data.get("cookies_file", ""))
+                    self.entries[key] = entry
+                    ctk.CTkButton(
+                        frame,
+                        text="Browse",
+                        width=50,
+                        height=34,
+                        corner_radius=8,
+                        fg_color="#8b5cf6",
+                        hover_color="#7c3aed",
+                        font=("Segoe UI", 12),
+                        command=lambda e=entry: self._browse_cookies(e)
+                    ).pack(side="left", padx=(4, 0))
+
                 else:
                     val = self.config_data.get(key, True)
                     switch = ctk.CTkSwitch(
@@ -158,11 +195,23 @@ class SettingsModal(ctk.CTkToplevel):
             command=self.destroy
         ).pack(fill="x", padx=30, pady=6)
 
+    def _get_browser_display(self):
+        val = self.config_data.get("cookies_from_browser", "")
+        return DISPLAY_BROWSER.get(val, "None")
+
+    def _browse_cookies(self, entry):
+        path = filedialog.askopenfilename(
+            title="Select cookies.txt file",
+            filetypes=[("Text files", "*.txt"), ("Netscape cookies", "*"), ("All files", "*.*")]
+        )
+        if path:
+            entry.delete(0, "end")
+            entry.insert(0, path)
+
     def save(self):
         def to_key(val):
             mapping = {
                 "dark": "dark", "light": "light", "system": "system",
-                "classic": "classic", "modern": "modern",
                 "best": "best", "1080p": "1080p", "720p": "720p", "480p": "480p", "mp3": "mp3",
                 "original": "original", "hash": "hash", "mixed": "mixed",
                 "video": "video", "audio": "audio",
@@ -175,13 +224,18 @@ class SettingsModal(ctk.CTkToplevel):
 
         for key, menu in self.menus.items():
             val = menu.get()
-            if key in ("theme", "ui_mode", "default_quality", "filename_mode", "max_threads"):
+            if key == "cookies_from_browser":
+                new_config[key] = BROWSER_VALUE.get(val, "")
+            elif key in ("theme", "default_quality", "filename_mode", "max_threads"):
                 new_config[key] = to_key(val)
             else:
                 new_config[key] = to_key(val)
 
         if "download_dir" in self.entries:
             new_config["download_dir"] = self.entries["download_dir"].get().strip()
+
+        if "cookies_file" in self.entries:
+            new_config["cookies_file"] = self.entries["cookies_file"].get().strip()
 
         for key, switch in self.switches.items():
             new_config[key] = bool(switch.get())

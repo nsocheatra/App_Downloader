@@ -1,14 +1,3 @@
-CLASSIC_THEME = {
-    "background": "#f5f5f5",
-    "card": "#ffffff",
-    "border": "#d1d5db",
-    "text": "#111827",
-    "muted": "#6b7280",
-    "primary": "#3b82f6",
-    "success": "#22c55e",
-    "danger": "#ef4444",
-}
-
 MODERN_THEME = {
     "background": "#08090c",       # Obsidian
     "card": "#11131c",             # Dark slate card
@@ -31,6 +20,4 @@ MODERN_THEME = {
 
 
 def get_theme(mode="modern"):
-    if mode == "classic":
-        return CLASSIC_THEME
     return MODERN_THEME

@@ -12,5 +12,7 @@
   "check_updates_on_startup": true,
   "default_file_type": "video",
   "show_completion_dialog": true,
-  "start_with_windows": true
+  "start_with_windows": true,
+  "cookies_file": "",
+  "cookies_from_browser": ""
 }

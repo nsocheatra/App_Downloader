@@ -45,11 +45,13 @@ def _silence_stderr():
 
 
 class Downloader:
-    def __init__(self, download_dir=None):
+    def __init__(self, download_dir=None, cookies_file=None, cookies_from_browser=None):
         if download_dir is None:
             download_dir = os.path.join(os.path.expanduser("~"), "Downloads", "App_Downloader", "videos")
         self.download_dir = download_dir
         self._ffmpeg_path = None
+        self.cookies_file = cookies_file
+        self.cookies_from_browser = cookies_from_browser
         try:
             os.makedirs(self.download_dir, exist_ok=True)
         except PermissionError:
@@ -149,6 +151,11 @@ class Downloader:
 
         if generic:
             ydl_opts["force_generic_extractor"] = True
+
+        if self.cookies_file:
+            ydl_opts["cookiefile"] = self.cookies_file
+        if self.cookies_from_browser:
+            ydl_opts["cookiesfrombrowser"] = (self.cookies_from_browser,)
 
         if self._ffmpeg_path is None:
             self._ffmpeg_path = self._ensure_ffmpeg()

@@ -104,9 +104,7 @@ class ModernView(ctk.CTkFrame):
         right = ctk.CTkFrame(inner, fg_color="transparent")
         right.pack(side="right")
         ctk.CTkLabel(right, text="v" + VERSION, font=("Segoe UI", 11), text_color=MUTED).pack(side="left", padx=(0, 12))
-        ctk.CTkButton(right, text="Classic Mode", fg_color=SURFACE, text_color=MUTED,
-            hover_color=SURFACE_HOVER, font=("Segoe UI", 12), height=28, corner_radius=6,
-            command=self.app.switch_ui_mode).pack(side="left")
+
 
     def _on_menu(self, item):
         if item == "Tools":

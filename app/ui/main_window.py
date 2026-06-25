@@ -173,22 +173,12 @@ class AppDownloader(ctk.CTk):
             self.current_view.destroy()
             self.current_view = None
 
-        if mode == "classic":
-            from app.ui.classic_view import ClassicView
-            self.current_view = ClassicView(self.view_container, self)
-            self.config_manager.set("ui_mode", "classic")
-        else:
-            from app.ui.modern_view import ModernView
-            self.current_view = ModernView(self.view_container, self)
-            self.config_manager.set("ui_mode", "modern")
+        from app.ui.modern_view import ModernView
+        self.current_view = ModernView(self.view_container, self)
+        self.config_manager.set("ui_mode", "modern")
 
         self.current_view.pack(fill="both", expand=True)
         self.refresh_history()
-
-    def switch_ui_mode(self):
-        current = self.config_manager.get("ui_mode", "modern")
-        new_mode = "classic" if current == "modern" else "modern"
-        self.show_view(new_mode)
 
     def get_url(self):
         if hasattr(self.current_view, "url_entry"):
@@ -330,7 +320,13 @@ class AppDownloader(ctk.CTk):
             if is_audio or quality == "mp3":
                 download_dir = self.config_manager.get("audio_dir")
 
-            downloader = Downloader(download_dir=download_dir)
+            cookies_file = self.config_manager.get("cookies_file", "")
+            cookies_from_browser = self.config_manager.get("cookies_from_browser", "")
+            downloader = Downloader(
+                download_dir=download_dir,
+                cookies_file=cookies_file or None,
+                cookies_from_browser=cookies_from_browser or None
+            )
             info = downloader.download(
                 url=url,
                 quality=quality,
@@ -406,11 +402,7 @@ class AppDownloader(ctk.CTk):
         theme = self.config_manager.get("theme", "dark")
         ctk.set_appearance_mode(theme)
 
-        current_ui = self.config_manager.get("ui_mode", "modern")
-        if current_ui != self.config_manager.config.get("ui_mode"):
-            self.show_view(self.config_manager.get("ui_mode", "modern"))
-        else:
-            self.refresh_history()
+        self.refresh_history()
 
     def _check_updates_on_startup(self):
         if self.config_manager.get("check_updates_on_startup", True):
