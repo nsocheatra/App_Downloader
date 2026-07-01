@@ -1,6 +1,6 @@
 [Setup]
 AppName=App_Downloader
-AppVersion=1.4.3
+AppVersion=2.0.0
 DefaultDirName={autopf}\App_Downloader
 DefaultGroupName=App_Downloader
 OutputDir=output
