@@ -8,3 +8,5 @@ dist/
 output/
 *.spec
 bin/
+nul
+create_release.py
