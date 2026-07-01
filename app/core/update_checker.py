@@ -22,7 +22,15 @@ class UpdateChecker:
         return match.group(0) if match else ""
 
     def _version_tuple(self, v):
-        return tuple(int(x) for x in v.split("."))
+        parts = v.split(".")
+        nums = []
+        for p in parts:
+            try:
+                nums.append(int(p))
+            except ValueError:
+                m = re.match(r"(\d+)", p)
+                nums.append(int(m.group(1)) if m else 0)
+        return tuple(nums)
 
     def _check_worker(self):
         try:
@@ -55,12 +63,18 @@ class UpdateChecker:
             if asset["name"].endswith(".exe") and "Setup" not in asset["name"]:
                 self.exe_download_url = asset["browser_download_url"]
                 break
+        if not self.exe_download_url:
+            for asset in data.get("assets", []):
+                if asset["name"].endswith(".exe"):
+                    self.exe_download_url = asset["browser_download_url"]
+                    break
 
         self.has_update = self._version_tuple(self.latest_version) > self._version_tuple(VERSION)
 
     def _check_via_raw(self):
-        url = f"https://raw.githubusercontent.com/{REPO_OWNER}/{REPO_NAME}/main/app/version.py"
         headers = {"User-Agent": f"{APP_NAME}/{VERSION}"}
+
+        url = f"https://raw.githubusercontent.com/{REPO_OWNER}/{REPO_NAME}/main/app/version.py"
         resp = requests.get(url, timeout=10, headers=headers)
         if resp.status_code != 200:
             raise Exception(f"Raw fetch returned {resp.status_code}")
@@ -70,9 +84,25 @@ class UpdateChecker:
             raise Exception("Could not parse version from raw file")
 
         self.latest_version = match.group(1)
-        self.download_url = f"https://github.com/{REPO_OWNER}/{REPO_NAME}/releases/tag/v{self.latest_version}"
-        self.exe_download_url = (
-            f"https://github.com/{REPO_OWNER}/{REPO_NAME}/releases/download/"
-            f"v{self.latest_version}/App_Downloader_v{self.latest_version}.exe"
-        )
+        tag = f"v{self.latest_version}"
+        self.download_url = f"https://github.com/{REPO_OWNER}/{REPO_NAME}/releases/tag/{tag}"
+        self.exe_download_url = None
+
+        try:
+            tag_url = f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/releases/tags/{tag}"
+            tag_resp = requests.get(tag_url, timeout=10, headers=headers)
+            if tag_resp.status_code == 200:
+                tag_data = tag_resp.json()
+                for asset in tag_data.get("assets", []):
+                    if asset["name"].endswith(".exe"):
+                        self.exe_download_url = asset["browser_download_url"]
+                        break
+        except:
+            pass
+
+        if not self.exe_download_url:
+            self.exe_download_url = (
+                f"https://github.com/{REPO_OWNER}/{REPO_NAME}/releases/download/"
+                f"{tag}/App_Downloader_v{self.latest_version}.exe"
+            )
         self.has_update = self._version_tuple(self.latest_version) > self._version_tuple(VERSION)

@@ -427,7 +427,7 @@ class AppDownloader(ctk.CTk):
             def __init__(self):
                 super().__init__(app_ref)
                 self.title("Update Available")
-                self.geometry("420x260")
+                self.geometry("460x300")
                 self.resizable(False, False)
                 self.transient(app_ref)
                 self.grab_set()
@@ -448,7 +448,7 @@ class AppDownloader(ctk.CTk):
 
                 ctk.CTkLabel(
                     self,
-                    text=f"You are on v{VERSION}. Click Update to auto-install.",
+                    text=f"You are on v{VERSION}.",
                     font=("Segoe UI", 12),
                     text_color="#64748b"
                 ).pack(pady=(0, 12))
@@ -463,13 +463,24 @@ class AppDownloader(ctk.CTk):
 
                 ctk.CTkButton(
                     self.btn_frame,
-                    text="Update & Restart",
+                    text="Download & Install",
                     height=38,
                     corner_radius=10,
                     fg_color="#22c55e",
                     hover_color="#16a34a",
                     font=("Segoe UI", 13, "bold"),
                     command=self._do_update
+                ).pack(side="left", padx=6)
+
+                ctk.CTkButton(
+                    self.btn_frame,
+                    text="Open Download Page",
+                    height=38,
+                    corner_radius=10,
+                    fg_color="#3b82f6",
+                    hover_color="#2563eb",
+                    font=("Segoe UI", 13),
+                    command=self._open_browser
                 ).pack(side="left", padx=6)
 
                 ctk.CTkButton(
@@ -482,13 +493,17 @@ class AppDownloader(ctk.CTk):
                     command=self.destroy
                 ).pack(side="left", padx=6)
 
+            def _open_browser(self):
+                import webbrowser
+                url = checker.download_url or checker.exe_download_url
+                if url:
+                    webbrowser.open(url)
+                self.destroy()
+
             def _do_update(self):
                 exe_url = checker.exe_download_url
                 if not exe_url:
-                    messagebox.showwarning(
-                        "No Download Link",
-                        "Could not find the download URL.\nPlease update manually from the release page."
-                    )
+                    self._open_browser()
                     return
                 self._download_and_install(exe_url)
 
@@ -526,9 +541,16 @@ class AppDownloader(ctk.CTk):
                     with open(temp_exe, "wb") as f:
                         f.write(data)
 
-                    current_exe = os.path.abspath(
-                        sys.executable if getattr(sys, 'frozen', False) else __file__
-                    )
+                    if not getattr(sys, 'frozen', False):
+                        self.after(0, lambda: messagebox.showinfo(
+                            "Download Complete",
+                            f"Update downloaded to:\n{temp_exe}\n\n"
+                            f"Replace your application file manually."
+                        ))
+                        self.after(0, self.destroy)
+                        return
+
+                    current_exe = os.path.abspath(sys.executable)
                     bat_path = os.path.join(os.environ.get("TEMP", "."), "update_app.bat")
                     bat_content = (
                         '@echo off\n'
@@ -557,7 +579,8 @@ class AppDownloader(ctk.CTk):
                 except Exception as e:
                     self.after(0, lambda msg=str(e): messagebox.showerror(
                         "Update Failed",
-                        f"Could not download update:\n{msg}\n\nTry downloading manually from the release page."
+                        f"Could not download update:\n{msg}\n\n"
+                        f"Try manually from:\n{checker.download_url}"
                     ))
                     self.after(0, self.destroy)
 

@@ -183,6 +183,10 @@ class Downloader:
                         "preferredquality": "192",
                     }
                 ]
+        elif has_ffmpeg:
+            ydl_opts["postprocessors"] = [
+                {"key": "FFmpegVideoConvertor", "preferedformat": "mp4"}
+            ]
 
         return ydl_opts
 
