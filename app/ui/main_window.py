@@ -2,6 +2,7 @@ import sys
 import threading
 import os
 import subprocess
+import requests
 import customtkinter as ctk
 from tkinter import messagebox
 
