@@ -1,7 +1,7 @@
 import re
 import threading
 import requests
-from app.version import VERSION, REPO_OWNER, REPO_NAME
+from app.version import VERSION, REPO_OWNER, REPO_NAME, APP_NAME
 
 
 class UpdateChecker:

@@ -458,6 +458,13 @@ class AppDownloader(ctk.CTk):
                     corner_radius=3, fg_color="#1e2448", progress_color="#22c55e"
                 )
 
+                self.status_label = ctk.CTkLabel(
+                    self,
+                    text="",
+                    font=("Segoe UI", 11),
+                    text_color="#64748b"
+                )
+
                 self.btn_frame = ctk.CTkFrame(self, fg_color="transparent")
                 self.btn_frame.pack()
 
@@ -508,7 +515,9 @@ class AppDownloader(ctk.CTk):
                 self._download_and_install(exe_url)
 
             def _download_and_install(self, url):
-                self.progress.pack(pady=(0, 12))
+                self.progress.pack(pady=(12, 6))
+                self.status_label.pack(pady=(0, 12))
+                self.status_label.configure(text="Connecting...")
                 self.progress.configure(mode="indeterminate")
                 self.progress.start()
                 for child in self.btn_frame.winfo_children():
@@ -527,11 +536,10 @@ class AppDownloader(ctk.CTk):
                         if chunk:
                             chunks.append(chunk)
                             downloaded += len(chunk)
-                            if total:
-                                pct = downloaded / total
-                                def setp(v=pct):
-                                    self._set_progress(v)
-                                self.after(0, setp)
+                            pct = downloaded / total if total else 0
+                            def setp(v=pct, dl=downloaded, tot=total):
+                                self._set_progress(v, dl, tot)
+                            self.after(0, setp)
 
                     data = b"".join(chunks)
                     temp_exe = os.path.join(
@@ -584,11 +592,22 @@ class AppDownloader(ctk.CTk):
                     ))
                     self.after(0, self.destroy)
 
-            def _set_progress(self, value):
+            def _set_progress(self, value, downloaded=0, total=0):
                 if self.progress.cget("mode") == "indeterminate":
                     self.progress.stop()
                     self.progress.configure(mode="determinate")
                 self.progress.set(value)
+                dl_mb = downloaded / (1024 * 1024)
+                if total:
+                    tot_mb = total / (1024 * 1024)
+                    pct = int(value * 100)
+                    self.status_label.configure(
+                        text=f"Downloading update: {dl_mb:.2f} MB / {tot_mb:.2f} MB ({pct}%)"
+                    )
+                else:
+                    self.status_label.configure(
+                        text=f"Downloading update: {dl_mb:.2f} MB"
+                    )
 
         UpdateNotification()
 

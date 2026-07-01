@@ -1,7 +1,7 @@
 [Setup]
 AppName=App_Downloader
 ; Keep in sync with app/version.py
-AppVersion=2.1.0
+AppVersion=2.1.1
 DefaultDirName={autopf}\App_Downloader
 DefaultGroupName=App_Downloader
 OutputDir=output
